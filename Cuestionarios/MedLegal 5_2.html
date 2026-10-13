@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3869c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../images/icons/icon-192x192.png">
+    <title>Simulador de Examen - Medicina Legal</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"
+        aria-describedby="install-description">
+        <div class="install-content">
+            <p class="install-love"><strong><em>Hola preciosa, espero te sirva. Te amo</em></strong></p>
+            <h2 id="install-title">Descarga la aplicación</h2>
+            <p id="install-description" class="install-description">
+                Instala la aplicación para abrir tus cuestionarios y usarlos sin conexión.
+            </p>
+            <div class="install-actions">
+                <button id="install-app-button" type="button">Descargar aplicación</button>
+                <button id="install-close-button" class="install-close" type="button">Ahora no</button>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="container">
+        <a class="btn btn-outline-primary home-button" href="../index.html">
+            <span>< Volver al inicio</span>
+        </a>
+
+        <div class="offline-actions">
+            <button id="offline-toggle" class="btn btn-outline-primary" type="button"
+                data-offline-url="../Cuestionarios/MedLegal%205_2.html" disabled>
+                Preparar para usar sin conexión
+            </button>
+            <p id="offline-status" class="offline-status" role="status" aria-live="polite">
+                Comprobando el acceso sin conexión...
+            </p>
+        </div>
+
+        <div class="text-center mb-3">
+            <h2 class="fw-bold text-primary">Simulador</h2>
+            <p class="text-muted">Pon a prueba tus conocimientos paso a paso</p>
+        </div>
+
+        <!-- Controles para seleccionar modalidad -->
+        <div class="mode-selector">
+            <button id="mode-questions-btn" class="btn btn-primary btn-mode"
+                onclick="cambiarModo('preguntas')">Preguntas Directas</button>
+            <button id="mode-cases-btn" class="btn btn-outline-primary btn-mode" onclick="cambiarModo('casos')">Casos
+                Clínicos</button>
+        </div>
+
+        <div class="card-quiz">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span id="question-counter" class="badge bg-secondary">Pregunta 1 de X</span>
+                <span id="score-counter" class="badge bg-success">Aciertos: 0</span>
+            </div>
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <!-- Caja para la descripción del caso clínico (Oculta por defecto) -->
+            <div id="case-container" class="case-card d-none">
+                <h5 class="fw-bold mb-2">📌 Caso Clínico:</h5>
+                <p id="case-description"></p>
+            </div>
+
+            <div id="quiz-container">
+                <h4 id="question-text" class="fw-bold mb-4 text-dark">Cargando pregunta...</h4>
+
+                <div class="options-grid mb-4" id="options-container">
+                </div>
+            </div>
+
+            <div id="feedback-container" class="alert d-none mt-3">
+                <h5 id="feedback-title" class="fw-bold mb-1"></h5>
+                <p id="feedback-text"></p>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button id="next-btn" class="btn btn-primary btn-lg d-none">Siguiente Pregunta</button>
+            </div>
+
+        </div>
+
+        <div id="results-card" class="card-quiz text-center d-none mt-4">
+            <h3 class="fw-bold text-success mb-3">¡Simulador Finalizado!</h3>
+            <p class="mb-2">Has completado todas las preguntas.</p>
+            <h4 id="final-score" class="fw-bold text-primary mb-4"></h4>
+            <button onclick="reiniciarQuiz()" class="btn btn-outline-primary btn-lg">Volver a Intentar</button>
+        </div>
+    </div>
+
+    <script>
+
+
+        const mockPreguntas = [
+            {
+                "pregunta": "1. ¿Cuáles son las dos condiciones biomecánicas y biológicas estrictas requeridas para que se lleve a cabo el proceso de consolidación ósea primaria o directa?",
+                "opA": "Estabilidad relativa del foco y presencia de tejido cartilaginoso intermedio.",
+                "opB": "Estabilidad absoluta (ausencia de micromovimiento) y reducción anatómica perfecta con brecha menor a 0.1 mm.",
+                "opC": "Deformación del strain entre el 2% y el 10% e inmovilización con férula.",
+                "opD": "Micromovimiento controlado y formación extensa de callo óseo externo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según la sección de Consolidación Ósea en las fuentes (Pasaje 5), la consolidación primaria (directa o cortical) ocurre únicamente cuando se logran dos condiciones estrictas: estabilidad absoluta (ausencia de micromovimiento en el foco) y una reducción anatómica perfecta (contacto íntimo entre fragmentos o una brecha menor a 0.1 mm)."
+            },
+            {
+                "pregunta": "2. ¿Qué porcentaje de deformación (strain) en el foco de fractura estimula óptimamente la consolidación ósea secundaria mediante formación de callo y osificación endocondral?",
+                "opA": "Menor al 0.1%",
+                "opB": "Entre el 2% y el 10%",
+                "opC": "Entre el 15% y el 25%",
+                "opD": "Mayor al 30%",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el apartado de Consolidación Secundaria (Pasajes 6 y 9), la fijación que permite un micromovimiento controlado mantiene el strain o deformación entre el 2% y el 10%, lo que estimula a las células madre a producir cartílago que posteriormente se calcifica y transforma en hueso mediante osificación endocondral."
+            },
+            {
+                "pregunta": "3. Un paciente presenta una fractura expuesta con una herida de 8 cm, contusión cutánea, lesión moderada de partes blandas y conminución ósea moderada, sin pérdida extensa de cobertura ni lesión vascular. ¿Cómo se clasifica según la escala de Gustilo y Anderson?",
+                "opA": "Gustilo Tipo I",
+                "opB": "Gustilo Tipo II",
+                "opC": "Gustilo Tipo III A",
+                "opD": "Gustilo Tipo III B",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En las fuentes, dentro de la Clasificación de Gustilo y Anderson (Pasajes 20 y Cuadro 45-1-1), el Tipo II corresponde a una herida de 1 a 10 cm, sin colgajos mayores, con contusión cutánea, lesión moderada de partes blandas y conminución moderada."
+            },
+            {
+                "pregunta": "4. ¿Cuál es el esquema antibiótico sistémico indicado de manera temprana (<30 minutos) para una fractura expuesta clasificada como Gustilo III A sin contaminación por tierra o estiércol?",
+                "opA": "Monoterapia con Cefalosporina de 1.ª generación.",
+                "opB": "Cefalosporina de 1.ª generación combinada con un aminoglucósido (ej. Gentamicina 5 mg/kg/día).",
+                "opC": "Penicilina G benzatínica combinada con Metronidazol únicamente.",
+                "opD": "Cefalosporina de 3.ª generación en dosis única oral.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Antibioticoterapia en Fracturas Expuestas (Pasajes 20, 21 y Cuadro 45-1-2), para el grado Gustilo III se debe combinar una Cefalosporina de 1.ª generación con un aminoglucósido (como Gentamicina 5 mg/kg/día) para cobertura de gérmenes gramnegativos."
+            },
+            {
+                "pregunta": "5. Si una fractura expuesta ocurre en un entorno rural, campo o hacienda con riesgo de contaminación con tierra o estiércol (riesgo de anaerobios/Clostridium), ¿qué antimicrobiano debe adiccionarse al esquema profiláctico?",
+                "opA": "Ciprofloxacino",
+                "opB": "Vancomicina",
+                "opC": "Penicilina G o Metronidazol",
+                "opD": "Amikacina",
+                "respuestaCorrecta": "opC",
+                "explicacion": "Según las fuentes en la sección de Profilaxis en Fracturas Expuestas (Pasaje 21 y Cuadro 45-1-2), ante contaminación con tierra o estiércol se debe agregar Penicilina G o Metronidazol para cubrir bacterias anaerobias como Clostridium."
+            },
+            {
+                "pregunta": "6. ¿Cuál es el valor normal de la presión intracompartimental y a partir de qué cifra se considera indicación formal de fasciotomía?",
+                "opA": "Normal 0-8 mmHg; fasciotomía al acercarse o superar los 30 mmHg.",
+                "opB": "Normal 10-18 mmHg; fasciotomía a partir de 50 mmHg.",
+                "opC": "Normal 15-20 mmHg; fasciotomía a partir de 25 mmHg.",
+                "opD": "Normal 0-2 mmHg; fasciotomía a partir de 15 mmHg.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "De acuerdo con el tema de Síndrome Compartimental (Pasajes 23, 24 y notas del texto), la presión intracompartimental normal varía entre 0 y 8 mmHg; cuando se acerca a 30 mmHg o los supera, constituye la indicación formal de fasciotomía."
+            },
+            {
+                "pregunta": "7. ¿Cuál es el síntoma clínico más temprano y característico en el síndrome compartimental?",
+                "opA": "Ausencia completa de pulsos distales desde el inicio.",
+                "opB": "Dolor desproporcionado a los hallazgos clínicos que se agrava con el estiramiento pasivo muscular.",
+                "opC": "Parálisis motora flácida completa.",
+                "opD": "Necrosis cutánea con flictenas hemorrágicas.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Manifestaciones Clínicas del Síndrome Compartimental (Pasajes 23 y 24), el signo más temprano y clave es el dolor exquisito y profundo, desproporcionado a los hallazgos, que se agrava de manera característica con el estiramiento pasivo de los músculos del compartimento."
+            },
+            {
+                "pregunta": "8. En la fisiopatología del síndrome compartimental, ¿a los cuántos minutos de isquemia muscular se inicia el metabolismo anaeróbico y a cuántas horas los cambios morfológicos musculares son definitivos?",
+                "opA": "Inicia a los 30 minutos; definitivos a las 12 horas.",
+                "opB": "Inicia a los 10-15 minutos; definitivos a las 4 horas.",
+                "opC": "Inicia a las 2 horas; definitivos a las 24 horas.",
+                "opD": "Inicia a los 5 minutos; definitivos a las 2 horas.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según la secuencia descrita en el manual (Pasajes 24 y notas de isquemia), en el músculo a los 10-15 minutos de isquemia se inicia el metabolismo anaeróbico y a las 4 horas sus cambios morfológicos se vuelven definitivos."
+            },
+            {
+                "pregunta": "9. Una fractura de la diáfisis humeral se asocia en un 11% de los casos a lesión del nervio radial. ¿Cuál es la manifestación clínica neurológica resultante?",
+                "opA": "Mano en garra e hipoestesia del borde cubital de la mano.",
+                "opB": "Incapacidad para la dorsoflexión de la muñeca y dedos (mano caída o en gota) e hipoestesia en el dorso de la mano.",
+                "opC": "Mano del predicador e hipoestesia del pulpejo del índice.",
+                "opD": "Atrofia aislada de la eminencia tenar.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Fractura de Diáfisis Humeral (Pasajes 26 y 27), la lesión del nervio radial ocasiona hipoestesia e incapacidad para la dorsoflexión de la muñeca y los dedos (clínicamente conocida como mano caída o en gota)."
+            },
+            {
+                "pregunta": "10. ¿Cuáles son los límites anatómicos de las fracturas de la diáfisis humeral según la definición del manual?",
+                "opA": "Desde el cuello anatómico hasta el cuello quirúrgico del húmero.",
+                "opB": "Desde la inserción superior del músculo pectoral mayor hasta las crestas supracondíleas del húmero.",
+                "opC": "Desde la articulación acromioclavicular hasta la tróclea humeral.",
+                "opD": "Desde la troquiter hasta la cabeza del radio.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con la definición del manual (Pasaje 26 y texto de diáfisis humeral), las fracturas de la diáfisis humeral se extienden desde la inserción superior del músculo pectoral mayor hasta las crestas supracondíleas del húmero."
+            },
+            {
+                "pregunta": "11. En las fracturas desplazadas de clavícula en el adulto, ¿qué músculo tracciona hacia arriba el fragmento proximal y cuál es el tratamiento ortopédico más utilizado?",
+                "opA": "Trapecio tracciona hacia arriba; tratamiento con yeso toracobraquial.",
+                "opB": "Esternocleidomastoideo tracciona hacia arriba; tratamiento con vendaje en 8.",
+                "opC": "Pectoral mayor tracciona hacia arriba; tratamiento con fijador externo.",
+                "opD": "Subclavio tracciona hacia arriba; tratamiento con cabestrillo simple.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En las fuentes (Pasaje 15 y sección Fracturas de la Clavícula), el fragmento proximal se desplaza hacia arriba traccionado por el esternocleidomastoideo y el distal hacia abajo por el peso del brazo. El tratamiento ortopédico fundamental es el vendaje en 8."
+            },
+            {
+                "pregunta": "12. Paciente masculino con luxación anterior de hombro. A la inspección presenta el codo separado del tórax y aplanamiento de la silueta del hombro. ¿Cuáles son estos dos signos característicos?",
+                "opA": "Signo del hachazo y signo de la tecla de piano.",
+                "opB": "Signo del codo separado de la parrilla costal y signo de la charretera.",
+                "opC": "Signo de Lasègue y signo de Trendelenburg.",
+                "opD": "Signo de Tinel y signo de Phalen.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según la sección de Luxación Escapulohumeral (Pasaje 25 y texto correspondiente), la luxación anterior cursa con el codo separado de la parrilla costal y el signo de la charretera (aplanamiento del hombro por desplazamiento anterointerno de la cabeza humeral)."
+            },
+            {
+                "pregunta": "13. ¿Cuál es la indicación y característica principal de la Maniobra de Kocher en la reducción de luxación anterior de hombro?",
+                "opA": "Colocar el pie en la axila y traccionar la muñeca.",
+                "opB": "Colocar una sábana en la axila para hacer contratracción.",
+                "opC": "Se indica en casos con más de 24 horas de evolución y consta de 4 pasos: tracción, rotación externa, aducción y rotación interna.",
+                "opD": "Está totalmente contraindicada en todos los casos por causar parálisis del deltoides.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "En las fuentes (Pasajes de Luxación de Hombro), la maniobra de Kocher se indica especialmente en casos con más de 24 horas de evolución y consta de 4 pasos cautelosos: tracción en el eje del brazo, rotación externa, aducción y rotación interna."
+            },
+            {
+                "pregunta": "14. ¿En cuál lesión acromioclavicular se presenta el 'signo de la tecla de piano' y qué estructuras ligamentosas se encuentran rotas?",
+                "opA": "Subluxación acromioclavicular por rotura aislada del ligamento conoide.",
+                "opB": "Luxación completa acromioclavicular por rotura de ligamentos acromioclaviculares y coracoclaviculares (conoide y trapezoide).",
+                "opC": "Luxación esternoclavicular posterior.",
+                "opD": "Fractura de la apófisis coracoides.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el texto de Luxación Acromioclavicular (Pasajes correspondientes), la luxación completa presenta el signo de la tecla de piano (deformidad reducible al presionar hacia abajo) y se debe a la rotura de ligamentos acromioclaviculares y coracoclaviculares (conoide y trapezoide)."
+            },
+            {
+                "pregunta": "15. En el Síndrome de Brown-Séquard (hemisección medular), ¿cuál es el patrón neurológico característico por debajo del nivel de la lesión?",
+                "opA": "Pérdida motora ipsilateral, pérdida de propiocepción/vibración ipsilateral y pérdida de dolor/temperatura contralateral.",
+                "opB": "Pérdida motora contralateral, pérdida de propiocepción contralateral y pérdida de dolor ipsilateral.",
+                "opC": "Pérdida bilateral exclusiva de sensibilidad al dolor con motilidad intacta.",
+                "opD": "Parálisis en miembros superiores con conservación de miembros inferiores.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Según la sección de Lesión Medular / Síndrome de Brown-Séquard (Pasajes 28, 30 y tablas de vías medulares), la hemisección produce pérdida motora ipsilateral (vía corticoespinal), pérdida de propiocepción y vibración ipsilateral (columnas posteriores) y pérdida de dolor y temperatura contralateral (vía espinotalámica)."
+            },
+            {
+                "pregunta": "16. En el Síndrome Medular Anterior, ¿qué funciones neurológicas se pierden y cuáles se conservan?",
+                "opA": "Se pierde la propiocepción y vibración; se conserva el movimiento y el dolor.",
+                "opB": "Se pierde el movimiento, el dolor y la temperatura; se conserva la propiocepción y la vibración.",
+                "opC": "Se pierden únicamente las funciones del esfínter anal.",
+                "opD": "Se pierde la sensibilidad táctil en la cabeza y cuello.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En las fuentes (Pasajes 28 y 31), el Síndrome anterior provoca pérdida de movimiento, dolor y temperatura, manteniendo conservadas la vibración y la propiocepción por integridad de las columnas posteriores."
+            },
+            {
+                "pregunta": "17. ¿Cuál es el mecanismo traumático típico y el patrón de debilidad característico del Síndrome Medular Central?",
+                "opA": "Mecanismo de hiperflexión forzada; afecta más a miembros inferiores que a superiores.",
+                "opB": "Mecanismo de hiperextensión; afecta más a miembros superiores que a miembros inferiores.",
+                "opC": "Trauma por arma blanca; afectación motora unilateral pura.",
+                "opD": "Compresión lumbar; produce únicamente anestesia en silla de montar.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En los Pasajes 31 y tablas de Síndromes Medulares Incompletos, el síndrome medular central es provocado típicamente por hiperextensión (común en región cervical) y presenta un compromiso motor de brazos > piernas."
+            },
+            {
+                "pregunta": "18. En la Escala de Lesión Medular ASIA (American Spinal Injury Association), ¿cómo se definen el Grado A y el Grado B?",
+                "opA": "Grado A = función normal; Grado B = parálisis motora parcial.",
+                "opB": "Grado A = ausencia completa de función sensitiva y motora en S4-S5; Grado B = preservación sensitiva pero no motora por debajo del nivel neurológico incluyendo S4-S5.",
+                "opC": "Grado A = preservación de fuerza 3/5; Grado B = fuerza 1/5.",
+                "opD": "Grado A = choque medular; Grado B = espasticidad.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el Cuadro 50-2 de la Escala ASIA (Pasaje 33 / Cuadro ASIA), A = completa (ausencia de función sensitiva y motora en S4-S5) y B = incompleta (preservación sensitiva pero no motora por debajo del nivel neurológico afectando a S4-S5)."
+            },
+            {
+                "pregunta": "19. ¿Qué hallazgo clínico o radiológico distingue un Esguince Cervical Grado 3 de un Grado 4 en la Clasificación de Quebec?",
+                "opA": "Grado 3 presenta dolor local; Grado 4 es asintomático.",
+                "opB": "Grado 3 presenta síntomas cervicales con signos neurológicos (debilidad, alteración de RTO); Grado 4 presenta síntomas cervicales con fractura o luxación cervical.",
+                "opC": "Grado 3 requiere cirugía; Grado 4 solo hielo.",
+                "opD": "Grado 3 es radiografía normal; Grado 4 es lordosis conservada.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Esguince Cervical / Clasificación de Quebec (Pasajes 17, 18 y tabla Quebec), Grado 3 abarca síntomas cervicales más signos neurológicos (debilidad, déficits sensitivos o reflejos) y Grado 4 involucra fractura o luxación de la columna cervical."
+            },
+            {
+                "pregunta": "20. Durante un esguince de tobillo por mecanismo de inversión forzada, ¿cuál es el ligamento que se lesiona con mayor frecuencia?",
+                "opA": "Ligamento calcaneofibular (LCF/CFL).",
+                "opB": "Ligamento talofibular posterior (LTFP/PTFL).",
+                "opC": "Ligamento talofibular anterior (LTFA/ATFL).",
+                "opD": "Ligamento deltoideo profundo.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "En la sección de Esguince de Tobillo (Pasajes 18 y 19), el ligamento talofibular anterior (LTFA/ATFL) es la estructura que se lesiona primero y con mayor frecuencia en traumatismos por inversión."
+            },
+            {
+                "pregunta": "21. ¿Por qué el tiempo de consolidación ósea en los recién nacidos es de tan solo 2 a 3 semanas?",
+                "opA": "Por la presencia de osteoclastos inactivos.",
+                "opB": "Debido a un periostio grueso y altamente vascularizado.",
+                "opC": "Por ausencia de osificación endocondral.",
+                "opD": "Porque su hueso es exclusivamente cortical denso.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el apartado de Tiempos y Factores de Consolidación (Pasaje 8 y 9), se especifica que en recién nacidos la consolidación es muy rápida (2-3 semanas) gracias a que poseen un periostio grueso y ricamente vascularizado."
+            },
+            {
+                "pregunta": "22. ¿A partir de cuántos meses de la fractura se declara formalmente la Seudoartrosis (No Unión) y cuál es el criterio radiográfico requerido?",
+                "opA": "A los 3 meses, sin presencia de dolor.",
+                "opB": "De 6 a 9 meses transcurridos desde la fractura, sin observarse cambios o avances en las radiografías durante los últimos 3 meses.",
+                "opC": "A los 12 meses, siempre que exista callo blando.",
+                "opD": "A las 6 semanas si se colocó yeso.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la definición formal de Seudoartrosis (Pasaje 14), esta se declara cuando han transcurrido de 6 a 9 meses desde la fractura y no se observan cambios o avances radiográficos durante los últimos 3 meses."
+            },
+            {
+                "pregunta": "23. ¿Cómo se define el Retardo de Consolidación (consolidación tardía) en las fuentes?",
+                "opA": "Cuando la fractura no ha pegado tras 12 meses y requiere amputación.",
+                "opB": "Cuando la fractura no ha pegado transcurrido el tiempo esperado (habitualmente 3 a 6 meses), pero la biología del hueso muestra señales de continuar intentando reparar.",
+                "opC": "Cuando se forma un callo óseo antes de las 2 semanas.",
+                "opD": "Cuando hay consolidación en ángulo mayor a 45 grados.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el Pasaje 14, el retardo de consolidación ocurre cuando la fractura no ha pegado en el tiempo esperado para ese hueso (entre 3 y 6 meses), pero la biología ósea aún muestra actividad de reparación."
+            },
+            {
+                "pregunta": "24. ¿Qué tipo de estabilidad y qué tipo de consolidación ósea se obtiene mediante la fijación con una Placa de Bloqueo / Compresión?",
+                "opA": "Estabilidad relativa y consolidación secundaria con callo óseo.",
+                "opB": "Estabilidad absoluta y consolidación primaria (directa) sin formación de callo.",
+                "opC": "Estabilidad elástica y osificación intramembranosa extensa.",
+                "opD": "Inestabilidad y formación de seudoartrosis.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el apartado de Tipos de Fijación (Pasaje 10), la placa de compresión/bloqueo elimina todo micromovimiento (estabilidad absoluta), lo que genera consolidación primaria directa sin callo óseo."
+            },
+            {
+                "pregunta": "25. El uso de un clavo endomedular o una placa puente (placa sin compresión) conduce a qué tipo de consolidación ósea:",
+                "opA": "Consolidación primaria cortical sin callo.",
+                "opB": "Consolidación secundaria (indirecta) con formación de callo óseo.",
+                "opC": "Seudoartrosis atrófica obligatoria.",
+                "opD": "Anquilosis articular estática.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según los Pasajes 9, 10 y 11, las placas puente y los clavos endomedulares brindan estabilidad relativa permitiendo un micromovimiento controlado que estimula la formación de callo óseo (consolidación secundaria)."
+            },
+            {
+                "pregunta": "26. ¿Cómo actúa mecánicamente un clavo endomedular en huesos largos de carga y qué función cumplen sus pernos de bloqueo?",
+                "opA": "Actúa como placa rígida externa; los pernos aumentan la brecha ósea.",
+                "opB": "Actúa como 'tutor interno' controlando fuerzas de flexión; los pernos de bloqueo evitan el acortamiento y la rotación fuera de eje.",
+                "opC": "Destruye la médula e impide la irrigación sanguínea.",
+                "opD": "Funciona como fijador externo para alargar huesos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con la descripción del Clavo Endomedular (Pasaje 11), este actúa como un tutor interno que controla las fuerzas de flexión, mientras que sus pernos o tornillos cruzados evitan que el hueso se acorte o rote fuera de su eje."
+            },
+            {
+                "pregunta": "27. ¿Cuáles son las indicaciones clínicas principales para el uso de un Fijador Externo?",
+                "opA": "Fracturas cerradas no desplazadas en niños.",
+                "opB": "Fracturas expuestas de alta energía con riesgo de infección, manejo en politraumatizados críticos (control de daños) y alargamiento óseo.",
+                "opC": "Esguince de tobillo grado I.",
+                "opD": "Fracturas estables de costillas y falanges.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el texto de Fijador Externo (Pasajes 12 y 22), sus usos principales son fracturas expuestas de alta energía con riesgo grave de infección o pérdida tisular, politraumatizados críticos (control de daños) y alargamientos óseos."
+            },
+            {
+                "pregunta": "28. En la escala MESS (Mangled Extremity Severity Score), ¿qué puntaje total se considera el umbral representativo para predecir la necesidad de amputación de una extremidad?",
+                "opA": "3 puntos o más.",
+                "opB": "7 puntos o más.",
+                "opC": "12 puntos o más.",
+                "opD": "15 puntos o más.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el Cuadro 45-1-3 sobre la Escala MESS (Pasaje 22 y anotación manuscrita en la imagen), se indica expresamente que una puntuación total de 7 puntos o más constituye el valor representativo para decidir amputación."
+            },
+            {
+                "pregunta": "29. ¿Cuáles son los cuatro parámetros clínicos y demográficos que evalúa la puntuación de MESS?",
+                "opA": "Movilidad articular, tipo de yeso, PCR y hemoglobina.",
+                "opB": "Lesión ósea/tejidos blandos, isquemia del miembro, shock (presión sistólica) y edad.",
+                "opC": "Escala de Glasgow, frecuencia cardíaca, escala de Quebec y tipo de tracción.",
+                "opD": "Sensibilidad al tacto, reflejos, índice tobillo-brazo y tiempo de traslado.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el Cuadro 45-1-3 (MESS, Pasaje 22 / Imagen MESS), los 4 parámetros evaluados son: 1. Lesión ósea/tejidos blandos, 2. Isquemia del miembro, 3. Shock y 4. Edad del paciente."
+            },
+            {
+                "pregunta": "30. A diferencia de la luxación anterior, ¿cuál es el mecanismo desencadenante característico de la fractura-luxación posterior de hombro?",
+                "opA": "Caída en abducción y rotación externa.",
+                "opB": "Contracciones musculares violentas secundarias a descargas eléctricas, crisis convulsivas o traumas directos en aducción y rotación interna.",
+                "opC": "Lanzamiento repetitivo en deportistas.",
+                "opD": "Tracción longitudinal sostenida del brazo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Fractura-Luxación Posterior de Hombro (Pasajes 25 y 26), se destaca que ocurre por contracciones musculares violentas secundarias a descargas eléctricas, crisis convulsivas o traumas de alta energía con el brazo en aducción y rotación interna."
+            },
+            {
+                "pregunta": "31. ¿Cuál es el rango normal de movilidad en flexoextensión del codo en el adulto y qué estructuras componen el Triángulo de Nélaton?",
+                "opA": "Flexoextensión de 0 a 90°; formado por la cabeza del radio, escafoides y semilunar.",
+                "opB": "Flexoextensión de 0 a 150°; formado por la epitróclea (epicóndilo medial), epicóndilo lateral y olécranon.",
+                "opC": "Flexoextensión de -10 a 180°; formado por la apófisis coracoides, acromion y clavícula.",
+                "opD": "Flexoextensión de 0 a 200°; formado por maleolo interno, externo y rótula.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el tema de Codo del Adulto (Pasaje 33), la movilidad normal del codo es de 0-150° y las referencias anatómicas palpalbles que forman el Triángulo de Nélaton son la epitróclea, el epicóndilo y el olécranon."
+            },
+            {
+                "pregunta": "32. ¿Cuál es el mecanismo traumático indirecto más común que produce la fractura de la cabeza del radio?",
+                "opA": "Golpe directo en el olécranon.",
+                "opB": "Caída con apoyo sobre la mano en pronación.",
+                "opC": "Tracción brusca del antebrazo en supinación.",
+                "opD": "Aducción forzada de la muñeca.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el apartado de Fractura de la Cabeza del Radio (Pasaje 34), el mecanismo indirecto típico de producción es una caída con apoyo sobre la mano en pronación."
+            },
+            {
+                "pregunta": "33. Durante la consolidación secundaria, ¿cuánto tiempo comprende la Fase Inflamatoria inicial y qué citocinas/factores participan?",
+                "opA": "Dura de 1 a 7 días; participan PDGF, FGF-B, PGE2, IL-1, IL-6 y TNF-alfa.",
+                "opB": "Dura 6 meses; participan únicamente inmunoglobulinas.",
+                "opC": "Dura 24 horas; participan paratohormona y calcitonina.",
+                "opD": "Dura 1 año; participan factores de la coagulación exclusivamente.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En el esquema de Fases de Consolidación (Pasaje 8), la fase inflamatoria inicial abarca de 1 a 7 días y en ella participan mediadores como PDGF, FGF-B, PGE2, IL-1, IL-6 y TNF-alfa."
+            },
+            {
+                "pregunta": "34. ¿Cuál es el principio fundamental de la inmovilización funcional según Sarmiento?",
+                "opA": "Inmovilizar todas las articulaciones adyacentes de forma rígida.",
+                "opB": "No requerir inmovilización rígida completa articular, ya que la función estimula la consolidación y previene la rigidez.",
+                "opC": "Reposo absoluto en cama con tracción durante 3 meses.",
+                "opD": "Uso de clavos de Steinmann en todos los casos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Inmovilización Funcional de Sarmiento (Pasaje 13 y diapositivas de Sarmiento), los principios establecen que la función estimula la consolidación, previene la rigidez articular y reduce la estancia hospitalaria."
+            },
+            {
+                "pregunta": "35. En la inspección física de la postura desde la vista posterior, ¿dónde debe caer la línea de la plomada imaginaria?",
+                "opA": "A la altura del hueso hioides.",
+                "opB": "Entre ambos talones.",
+                "opC": "Por delante de la rótula derecha.",
+                "opD": "En el trocánter mayor izquierdo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Exploración de la Postura (Pasaje 15), en la vista posterior a través de la plomada imaginaria, esta cae entre ambos talones."
+            },
+            {
+                "pregunta": "36. Durante la evaluación postural en vista lateral, ¿cuáles son las referencias anatómicas por donde debe pasar la línea de plomada?",
+                "opA": "Apófisis mastoides, hombro, trocánter mayor y maléolo lateral.",
+                "opB": "Apéndice xifoides, mentón y primer metatarsiano.",
+                "opC": "Espina ilíaca anterosuperior y rótula.",
+                "opD": "Lóbulo de la oreja y crestas supracondíleas.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En el Pasaje 16, la vista lateral de la postura evalúa el alineamiento pasando por la apófisis mastoides, el hombro, el trocánter mayor y el maléolo."
+            },
+            {
+                "pregunta": "37. En la exploración postural en vista anterior, ¿qué puntos se alinean en la línea media?",
+                "opA": "Apófisis mastoides, escápula y maléolo externo.",
+                "opB": "Parte media de la frente, mentón, apéndice xifoides, línea media esternal y sínfisis púbica.",
+                "opC": "Crestas ilíacas y pliegue poplíteo.",
+                "opD": "Conducto auditivo externo y talones.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el Pasaje 16, la vista anterior evalúa la alineación de la parte media de la frente, mentón, apéndice xifoides, línea media esternal y sínfisis púbica."
+            },
+            {
+                "pregunta": "38. ¿Cómo se define el traumatismo raquimedular (TRM) en las fuentes del curso?",
+                "opA": "Fractura aislada de apófisis espinosa sin síntomas.",
+                "opB": "Lesión mixta del componente óseo y contenido neural (médula espinal y raíces) de la columna que ocasiona alteración de funciones motoras, sensitivas y autonómicas.",
+                "opC": "Hernia discal lumbar asintomática.",
+                "opD": "Esguince de los ligamentos interespinosos cervicales.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En las fuentes (Pasaje 28 y texto TRM), el traumatismo raquimedular (TRM) es la lesión mixta del componente óseo y contenido neural (médula espinal y raíces) de la columna vertebral que ocasiona alteración de funciones motoras, sensitivas y autonómicas."
+            },
+            {
+                "pregunta": "39. ¿Cuáles son las manifestaciones clínicas iniciales del choque medular tras una transección completa?",
+                "opA": "Espasticidad, hiperreflexia y clonus de inmediato.",
+                "opB": "Parálisis flácida (flacidez medular), areflexia y pérdida sensitiva por debajo de la lesión.",
+                "opC": "Hipertensión severa con taquicardia.",
+                "opD": "Hipertermia maligna con contracturas.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según la descripción del choque medular (Pasajes 28 y 31), la fase inicial se presenta como flacidez medular (parálisis flácida) y areflexia, evolucionando posteriormente a espasticidad e hiperreflexia."
+            },
+            {
+                "pregunta": "40. ¿Dónde decusa la vía espinotalámica (dolor y temperatura), a diferencia del tracto corticoespinal motriz?",
+                "opA": "Decusa en la médula espinal (a nivel segmentario); el tracto corticoespinal decusa en el bulbo raquídeo.",
+                "opB": "Decusan ambas en el mesencéfalo.",
+                "opC": "La vía espinotalámica no decusa; la corticoespinal decusa en el puente.",
+                "opD": "La vía espinotalámica decusa en el bulbo y la corticoespinal en la corteza.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En la tabla de Vías Medulares (Pasaje 28 / Imagen de Vías), la vía espinotalámica (dolor y temperatura) cruza en la médula espinal, mientras que la vía corticoespinal (motora) y las columnas posteriores cruzan en el bulbo raquídeo."
+            },
+            {
+                "pregunta": "41. ¿Qué cuadro clínico caracteriza específicamente al Síndrome de Cono Medular?",
+                "opA": "Pérdida motora de miembros superiores con conservación de esfínteres.",
+                "opB": "Anestesia en silla de montar y alteración de esfínteres (vesical y anal) con déficit motor variable.",
+                "opC": "Parálisis aislada del nervio peroneo.",
+                "opD": "Pérdida de propiocepción en el tórax.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con las fuentes (Pasajes 31, 32 y tabla de síndromes medulares), el síndrome del cono medular afecta el cono terminal de la médula, manifestándose con anestesia en silla de montar y alteración de esfínteres."
+            },
+            {
+                "pregunta": "42. ¿Cuál es el criterio definitivo para clasificar una fractura expuesta como Gustilo y Anderson Tipo III C?",
+                "opA": "Presencia de contaminación por heces fecales.",
+                "opB": "Asociación con lesión vascular arterial que requiere reparación para mantener la viabilidad del miembro.",
+                "opC": "Amputación traumática al momento del accidente.",
+                "opD": "Fractura de más de tres huesos largos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la clasificación de Gustilo (Pasaje 20 y Cuadro 45-1-1 / texto Gustilo III C), el Tipo III C se define por la presencia de una lesión vascular/arterial asociada que necesita reparación, independientemente del grado de lesión de los tejidos blandos."
+            },
+            {
+                "pregunta": "43. ¿Cuál de los siguientes escenarios constituye un criterio absoluto de amputación en fracturas expuestas de miembro inferior según los textos del curso?",
+                "opA": "Fractura Gustilo III A de 12 cm.",
+                "opB": "Fractura tipo III C con pérdida total del nervio tibial posterior.",
+                "opC": "Fractura de fémur en joven de 20 años sin déficit vascular.",
+                "opD": "Retardo de consolidación de tibia de 4 meses.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la lista de Criterios Absolutos de Amputación (Pasaje 22 y texto Absolutos), se incluye expresamente a las fracturas tipo III C con pérdida total del nervio tibial posterior o pérdida masiva irrecuperable de tejidos blandos."
+            },
+            {
+                "pregunta": "44. En el manejo local de urgencias de una fractura expuesta con hueso visible, ¿cuál es la norma de manejo correcta?",
+                "opA": "Introducir de inmediato el hueso dentro de la herida.",
+                "opB": "No introducir el hueso expuesto; retirar únicamente contaminación gruesa superficial y cubrir con gasas estériles impregnadas en solución salina e inmovilizar.",
+                "opC": "Lavar con alcohol e inmovilizar con yeso apretado.",
+                "opD": "Cauterizar los extremos óseos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección Manejo Local de la Herida en Urgencias (Pasajes 20 y 21), la indicación es estricta: NO introducir el hueso expuesto; retirar únicamente contaminación gruesa superficial, cubrir con gasas estériles impregnadas en solución salina e inmovilizar."
+            },
+            {
+                "pregunta": "45. ¿Cuáles son indicaciones de tratamiento quirúrgico en la fractura de la diáfisis humeral?",
+                "opA": "Cualquier fractura cerrada no desplazada en niños.",
+                "opB": "Fracturas abiertas (expuestas), angulación mayor a 20-30 grados o acortamiento mayor a 2-3 cm.",
+                "opC": "Consolidación en 6 semanas.",
+                "opD": "Presencia de hematoma sin desplazamiento.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En los Pasajes 26 y 27 sobre manejo de Fractura de Diáfisis Humeral, aunque la mayoría se maneja conservadoramente, está indicada la cirugía en casos de fracturas abiertas, angulación > 20-30° o acortamiento > 2-3 cm."
+            },
+            {
+                "pregunta": "46. En el protocolo POLICE para esguince de tobillo en fase aguda, ¿qué significan las siglas OL?",
+                "opA": "Osteotomía Limitada.",
+                "opB": "Carga Óptima (Optimal Loading), referente al apoyo progresivo del pie según tolerancia.",
+                "opC": "Ortesis Lumbar.",
+                "opD": "Operación Ligamentosa.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el protocolo POLICE para esguince de tobillo (Pasaje 19 / Imagen POLICE), OL significa 'Optimal Loading' (Carga Óptima), que consiste en el apoyo progresivo del pie según la tolerancia del paciente."
+            },
+            {
+                "pregunta": "47. ¿Cuál es el tiempo promedio de consolidación esperado por vascularización para el hueso esponjoso en comparación con el hueso cortical en el adulto?",
+                "opA": "Hueso esponjoso ~4 semanas; hueso cortical 18-20 semanas.",
+                "opB": "Hueso esponjoso 1 año; hueso cortical 2 semanas.",
+                "opC": "Ambos tardan exactamente 8 semanas.",
+                "opD": "Hueso esponjoso 20 semanas; hueso cortical 3 semanas.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En la sección de Tiempo de Consolidación por Tipo de Tejido (Pasaje 8), el hueso esponjoso (metáfisis, epífisis) consolida aproximadamente en 4 semanas por su rica vascularización, mientras que el hueso cortical tarda de 18 a 20 semanas."
+            },
+            {
+                "pregunta": "48. En la historia clínica traumatológica, dentro del Padecimiento Actual, ¿qué mnemotecnia se emplea para el interrogatorio sistemático del dolor?",
+                "opA": "APGAR",
+                "opB": "ALICIA (Antigüedad, Localización, Intensidad, Carácter, Irradiación, Atenuantes/Agravantes)",
+                "opC": "SAMPLE",
+                "opD": "GLASGOW",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Historia Clínica (Pasajes 2 y 15), el interrogatorio detallado del dolor motivo de consulta utiliza la mnemotecnia ALICIA."
+            },
+            {
+                "pregunta": "49. ¿Cuáles son las localizaciones anatómicas más frecuentes del síndrome compartimental en el miembro superior e inferior respectivamente?",
+                "opA": "Compartimento posterior del brazo y compartimento glúteo.",
+                "opB": "Compartimento anterior del antebrazo y compartimento anterior o anterolateral de la pierna.",
+                "opC": "Compartimento tenar y compartimento plantar medio.",
+                "opD": "Compartimento deltoideo y posterior del muslo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Localización Frecuente del Síndrome Compartimental (Pasaje 24), la localización más frecuente en miembro superior es el compartimento anterior del antebrazo, y en miembro inferior el compartimento anterior o anterolateral de la pierna."
+            },
+            {
+                "pregunta": "50. Durante la fase de Remodelación ósea (que abarca de 1 a 7 años), ¿qué células efectoras participan en la sustitución del hueso inmaduro (trabecular) por hueso laminillar maduro?",
+                "opA": "Condrocitos y fibroblastos exclusivamente.",
+                "opB": "Osteoblastos y osteoclastos.",
+                "opC": "Eosinófilos y basófilos.",
+                "opD": "Miocitos y tenocitos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la Fase de Remodelación (Pasaje 13), la remodelación progresiva del hueso hacia tejido laminillar maduro a lo largo de años se efectúa mediante el acoplamiento y acción de osteoblastos y osteoclastos."
+            }
+        ];
+
+
+
+        const mockCasos = [
+            {
+                "explicacionCaso": "Paciente masculino de 28 años politraumatizado tras derrapar en motocicleta a alta velocidad. Presenta en el tercio medio de la pierna derecha una herida de 12 cm con bordes deshilachados, exposición del foco de fractura conminuta de tibia, desnudamiento perióstico severo y contaminación moderada con asfalto, pero conservando una adecuada cobertura de partes blandas sobre el hueso tras su alineación. A la exploración neurovascular distal, los pulsos pedio y tibial posterior se palpan presentes, con llenado capilar de 2 segundos y sensibilidad conservada.",
+                "preguntas": [
+                    {
+                        "pregunta": "1. De acuerdo con las características de la herida, el grado de conminución y la viabilidad de cobertura tisular, ¿cuál es la clasificación de Gustilo y Anderson correspondiente a esta fractura expuesta?",
+                        "opA": "Gustilo Tipo I",
+                        "opB": "Gustilo Tipo II",
+                        "opC": "Gustilo Tipo III A",
+                        "opD": "Gustilo Tipo III B",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "Según la Clasificación de Gustilo y Anderson descrita en las fuentes (Pasaje 20, Cuadro 45-1-1), las heridas mayores de 10 cm con fractura conminuta grave pero que poseen y conservan una cobertura cutánea/tisular adecuada del foco óseo se clasifican como Gustilo III A."
+                    },
+                    {
+                        "pregunta": "2. ¿Cuál es el esquema antibiótico sistémico inicial profiláctico de urgencia indicado para este paciente dentro de los primeros 30 minutos de su ingreso?",
+                        "opA": "Cefalosporina de 1.ª generación en monoterapia.",
+                        "opB": "Cefalosporina de 1.ª generación (ej. Cefazolina) combinada con un Aminoglucósido (ej. Gentamicina 5 mg/kg/día).",
+                        "opC": "Penicilina G benzatínica con Metronidazol únicamente.",
+                        "opD": "Ciprofloxacino por vía oral.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 21, Cuadro 45-1-2), para las fracturas expuestas clasificadas como Gustilo Grado III se indica la combinación de una Cefalosporina de 1.ª generación con un aminoglucósido (Gentamicina 5 mg/kg/día) para ampliar la cobertura contra gérmenes gramnegativos."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 55 años de edad, víctima de atropellamiento por vehículo de carga. Ingresa a la sala de choque hemodinámicamente inestable con hipotensión severa (TA 80/50 mmHg), palidez y diaforesis. Presenta aplastamiento grave del miembro inferior izquierdo con fractura expuesta de fémur distal y tibia proximal, miembro frío, insensible, pulso poplíteo y distal ausentes con relleno capilar nulo de más de 7 horas de evolución desde el accidente.",
+                "preguntas": [
+                    {
+                        "pregunta": "3. Al evaluar la gravedad del miembro mediante la escala MESS (Mangled Extremity Severity Score), considerando la alta energía/aplastamiento (3 pts), isquemia >6h (6 pts), shock persistente (2 pts) y edad (2 pts), el puntaje supera los 7 puntos. ¿Qué conducta terapéutica está indicada según los parámetros del manual?",
+                        "opA": "Inmovilización con férula de yeso y reevaluación en 48 horas.",
+                        "opB": "Amputación del miembro por alto riesgo de mortalidad y viabilidad nula.",
+                        "opC": "Reducción cerrada y colocación de tracción cutánea.",
+                        "opD": "Manejo conservador exclusivamente con antibióticos orales.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según las fuentes (Pasaje 22, Cuadro 45-1-3 MESS), un puntaje total en la escala MESS de 7 puntos o más se considera el umbral representativo para decidir la amputación de la extremidad."
+                    },
+                    {
+                        "pregunta": "4. ¿Cuál de los siguientes hallazgos representa un criterio absoluto de amputación primaria en miembro inferior según el texto?",
+                        "opA": "Fractura expuesta Gustilo I limpia.",
+                        "opB": "Fractura tipo III C con pérdida total del nervio tibial posterior o lesión masiva e irrecuperable de tejidos blandos.",
+                        "opC": "Fractura de clavícula desplazada.",
+                        "opD": "Esguince de tobillo grado III.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el apartado Criterios Absolutos de Amputación (Pasaje 22 y texto Absolutos), se establece expresamente que las fracturas tipo III C con pérdida total del nervio tibial posterior o pérdida masiva e irrecuperable de tejidos blandos constituyen un criterio absoluto de amputación."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 12 años con fractura supracondílea de codo derecho reducida e inmovilizada con yeso completo circular apretado. A las 6 horas consulta por dolor intenso, profundo y desproporcionado en antebrazo que no cede con opiáceos y que se exacerba de forma exquisita a la extensión pasiva de los dedos. Presenta parestesias en la mano, tensión a la palpación del antebrazo y llenado capilar enlentecido.",
+                "preguntas": [
+                    {
+                        "pregunta": "5. ¿Cuál es el diagnóstico de presunción y el signo clínico más temprano y sensible para esta complicación?",
+                        "opA": "Infección por anaerobios; signo del cajón positivo.",
+                        "opB": "Síndrome compartimental; dolor desproporcionado que se agrava con el estiramiento pasivo muscular.",
+                        "opC": "Trombosis venosa profunda; signo de Homans.",
+                        "opD": "Seudoartrosis atrófica; crepitación ósea.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el texto de Síndrome Compartimental (Pasaje 23, 24), el diagnóstico es un síndrome compartimental y su signo clave más temprano es el dolor exquisito y profundo fuera de proporción que se agrava al estiramiento pasivo muscular."
+                    },
+                    {
+                        "pregunta": "6. Si se realiza la medición de la presión intracompartimental, ¿a partir de qué valor presórico se confirma el diagnóstico y está indicada la fasciotomía quirúrgica de urgencia?",
+                        "opA": "A partir de 5 mmHg.",
+                        "opB": "Al acercarse o superar los 30 mmHg (normal 0-8 mmHg).",
+                        "opC": "Al superar los 70 mmHg.",
+                        "opD": "Cualquier presión positiva.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 24 y notas de presión compartimental), la presión normal varía de 0 a 8 mmHg; cuando se aproxima o supera los 30 mmHg, constituye la indicación formal de fasciotomía de urgencia."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 34 años de edad, quien sufre colisión vehicular por alcance trasero (mecanismo de latigazo cervical). Acude a Urgencias refiriendo cervicalgia severa irradiada a la cintura escapular, parestesias en dermatomas C6-C7 y disminución del reflejo bicipital y tricipital izquierdo. En la radiografía lateral se observa rectificación de la lordosis cervical fisiológica sin evidencia de fracturas o luxaciones.",
+                "preguntas": [
+                    {
+                        "pregunta": "7. ¿Cómo se clasifica este esguince cervical según la Escala de Quebec?",
+                        "opA": "Grado 0",
+                        "opB": "Grado 1",
+                        "opC": "Grado 2b",
+                        "opD": "Grado 3",
+                        "respuestaCorrecta": "opD",
+                        "explicacion": "En la Clasificación de Quebec para esguince cervical (Pasaje 18 y Tabla 1), el Grado 3 corresponde a la presencia de síntomas cervicales acompañados de signos neurológicos como debilidad, déficit sensitivo o alteración de los reflejos osteotendinosos."
+                    },
+                    {
+                        "pregunta": "8. ¿Cuáles son los estudios radiográficos iniciales indispensables ante la sospecha de esguince cervical y el manejo conservador recomendado?",
+                        "opA": "Resonancia magnética de columna total únicamente.",
+                        "opB": "Radiografías AP y lateral de columna cervical; inmovilización cuidadosa con collarín cervical, crioterapia inicial y AINEs/relajantes musculares.",
+                        "opC": "Tomografía axial computarizada con contraste inmediatamente.",
+                        "opD": "Arteriografía vertebral urgente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según las fuentes (Pasaje 18), ante la sospecha de esguince cervical se deben solicitar radiografías AP y lateral cervicales. El manejo abarca inmovilización con collarín, compresas frías en las primeras 24-48 h y farmacoterapia (AINEs, analgésicos y relajantes musculares)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Deportista de 22 años que sufre inversión forzada del tobillo izquierdo al descender de un salto en baloncesto. Presenta dolor agudo e inmediato en la cara anterolateral del tobillo, aumento de volumen, equimosis marcada e incapacidad parcial para la marcha. A la palpación hay dolor exquisito inmediatamente por delante del maléolo lateral.",
+                "preguntas": [
+                    {
+                        "pregunta": "9. ¿Cuál es la estructura ligamentosa que se lesiona con mayor frecuencia en este mecanismo de inversión?",
+                        "opA": "Ligamento deltoideo profundo.",
+                        "opB": "Ligamento talofibular anterior (LTFA / ATFL).",
+                        "opC": "Ligamento calcaneofibular (LCF).",
+                        "opD": "Ligamento talofibular posterior (LTFP).",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En la sección de Esguince de Tobillo (Pasajes 18 y 19), el ligamento talofibular anterior (LTFA/ATFL) es la estructura ligamentosa que se lesiona con mayor frecuencia en traumatismos por inversión."
+                    },
+                    {
+                        "pregunta": "10. ¿En qué consiste el principio 'OL' del protocolo POLICE indicado en la fase aguda (primeras 48-72 horas) de este esguince de tobillo?",
+                        "opA": "Osteotomía Limitada.",
+                        "opB": "Carga Óptima (Optimal Loading), permitiendo la apoya progresiva según la tolerancia del paciente.",
+                        "opC": "Ortesis Lumbar rígida.",
+                        "opD": "Operación de Ligamentos inmediata.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el protocolo POLICE (Pasaje 19 / Imagen POLICE), las siglas OL corresponden a 'Optimal Loading' (Carga Óptima), que promueve el apoyo progresivo del pie según la tolerancia del paciente para favorecer la recuperación."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente de 30 años trasladado a Urgencias tras caída de 6 metros de altura. Presenta déficit motor y sensitivo total por debajo del nivel de T10. A la evaluación neurológica se encuentra flacidez muscular completa en ambos miembros inferiores, ausencia total de reflejos osteotendinosos y del reflejo bulbocavernoso. La presión arterial es de 100/60 mmHg y la frecuencia cardíaca de 65 bpm.",
+                "preguntas": [
+                    {
+                        "pregunta": "11. ¿Cuál es la fase del traumatismo raquimedular que justifica la flacidez y areflexia completa descritas en la atención inicial?",
+                        "opA": "Fase de espasticidad crónica.",
+                        "opB": "Fase de choque medular (flacidez medular).",
+                        "opC": "Fase de remodelación refleja.",
+                        "opD": "Síndrome de compresión radicular periférica.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasajes 28, 31), la fase inicial del traumatismo raquimedular se manifiesta como choque medular, caracterizado por parálisis flácida (flacidez medular) y areflexia por debajo del nivel de la lesión."
+                    },
+                    {
+                        "pregunta": "12. Según la Escala de Lesión Medular ASIA (American Spinal Injury Association), ¿cómo se clasifica una lesión con ausencia completa de función motora y sensitiva en los segmentos sacros S4-S5?",
+                        "opA": "ASIA A (Completa)",
+                        "opB": "ASIA B (Incompleta)",
+                        "opC": "ASIA C (Incompleta)",
+                        "opD": "ASIA E (Normal)",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "De acuerdo con el Cuadro 50-2 de la Escala ASIA (Pasaje 33 / Cuadro ASIA), el Grado A se define como lesión completa con ausencia total de función sensitiva y motora en los segmentos sacros S4-S5."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 25 años que ingresa por sufrir herida por arma blanca en hemitórax posterior derecho a nivel vertebral T8. A la exploración física destaca parálisis motora y pérdida de la sensibilidad propioceptiva y vibratoria en el miembro inferior derecho (ipsilateral a la lesión), con conservación de la sensibilidad al dolor en dicho lado. Sin embargo, en el miembro inferior izquierdo (contralateral) presenta pérdida completa de la sensibilidad al dolor y la temperatura.",
+                "preguntas": [
+                    {
+                        "pregunta": "13. ¿Cuál es el diagnóstico sintomático del síndrome medular incompleto que presenta este paciente?",
+                        "opA": "Síndrome Medular Anterior.",
+                        "opB": "Síndrome de Brown-Séquard (hemisección medular).",
+                        "opC": "Síndrome Medular Central.",
+                        "opD": "Síndrome de Cono Medular.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasajes 28, 30 y 31), el Síndrome de Brown-Séquard se produce por hemisección medular y cursa con déficit motor y propioceptivo ipsilateral junto con pérdida de dolor y temperatura contralateral."
+                    },
+                    {
+                        "pregunta": "14. ¿En qué nivel del sistema nervioso decusa la vía espinotalámica (dolor y temperatura), explicando el hallazgo contralateral?",
+                        "opA": "En el bulbo raquídeo.",
+                        "opB": "En la médula espinal (a nivel segmentario de entrada).",
+                        "opC": "En el mesencéfalo.",
+                        "opD": "No decusa y asciende ipsilateralmente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según las tablas anatómicas de Vías Medulares (Pasaje 28 / Imagen Vías), la vía espinotalámica (que transporta dolor y temperatura) cruza al lado opuesto a nivel de la médula espinal."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 68 años con antecedentes de espondiloartrosis cervical, que sufre choque frontal en automóvil sufriendo mecanismo de hiperextensión cervical. A la exploración neurológica presenta marcada debilidad motora en ambos miembros superiores (fuerza 1/5) en comparación con miembros inferiores que conservan cierta fuerza útil (fuerza 3/5), acompañado de alteración sensitiva variable.",
+                "preguntas": [
+                    {
+                        "pregunta": "15. ¿Cuál es el síndrome medular incompleto característico en este paciente?",
+                        "opA": "Síndrome Medular Posterior.",
+                        "opB": "Síndrome Medular Central.",
+                        "opC": "Síndrome Medular Anterior.",
+                        "opD": "Síndrome de Cola de Caballo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el cuadro de Síndromes Medulares Incompletos (Pasajes 31, 32 y tabla de síndromes medulares), el Síndrome Medular Central afecta la región cervical produciendo un compromiso motor característico de brazos mayor que piernas (brazos > piernas)."
+                    },
+                    {
+                        "pregunta": "16. ¿Cuál es el mecanismo traumático desencadenante más frecuente de este síndrome?",
+                        "opA": "Traumatismo por arma de fuego penetrante.",
+                        "opB": "Mecanismo de hiperextensión cervical (frecuente en adultos mayores o con canal estrecho).",
+                        "opC": "Flexión forzada pura con aplastamiento vertebral T12.",
+                        "opD": "Distracción articular atloidoaxial.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 32 y tabla de síndromes medulares), el síndrome medular central se produce predominantemente por un mecanismo de hiperextensión sobre la región cervical."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 29 años que sufre caída desde su propia altura mientras patinaba, apoyando la mano derecha en extensión y pronación del antebrazo. Refiere dolor agudo en la cara lateral del codo derecho y limitación para la pronosupinación. A la palpación existe dolor exquisito a nivel de la cabeza del radio.",
+                "preguntas": [
+                    {
+                        "pregunta": "17. ¿Cuál es el mecanismo de producción típico de la fractura de la cabeza del radio descrito en las fuentes?",
+                        "opA": "Golpe directo sobre la apófisis coronoides de la úlna.",
+                        "opB": "Mecanismo indirecto por caída con apoyo sobre la mano en pronación.",
+                        "opC": "Tensión repentina del músculo tríceps braquial.",
+                        "opD": "Hiperflexión del codo con valgo forzado.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el apartado de Fractura de Cabeza del Radio (Pasaje 34), el mecanismo de producción más frecuente es indirecto, derivado de una caída con apoyo de la mano en pronación."
+                    },
+                    {
+                        "pregunta": "18. En la exploración anatómica del codo, ¿qué tres referencias óseas palpables forman el 'Triángulo de Nélaton'?",
+                        "opA": "Cabeza del radio, apófisis estiloides radial y tubérculo bicipital.",
+                        "opB": "Epitróclea (epicóndilo medial), epicóndilo lateral y olécranon.",
+                        "opC": "Troquiter, troquín y corredera bicipital.",
+                        "opD": "Acromion, coracoides y espina de la escápula.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el tema de Codo del Adulto (Pasaje 33), las tres prominencias óseas palpables que conforman el Triángulo de Nélaton son la epitróclea, el epicóndilo y el olécranon."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 24 años que sufre caída durante partido de voleibol al intentar bloquear un balón con el brazo derecho en abducción y rotación externa forzada. Ingresa acunando el brazo afectado. A la inspección destaca el codo separado del tórax y la pérdida del contorno redondeado del hombro (signo de la charretera).",
+                "preguntas": [
+                    {
+                        "pregunta": "19. ¿Cuál es el diagnóstico clínico y los dos signos inspeccionales patognomónicos mencionados en el manual?",
+                        "opA": "Luxación acromioclavicular; signo de la tecla y equimosis.",
+                        "opB": "Luxación anterior de hombro (escapulohumeral); codo separado de la parrilla costal y signo de la charretera.",
+                        "opC": "Fractura de cuello quirúrgico de húmero; signo de Hennequin.",
+                        "opD": "Luxación posterior de hombro; brazo adherido al cuerpo en rotación interna pura.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 25 y texto Luxación Escapulohumeral), la luxación anterior se caracteriza clínicamente por dos signos clave: codo separado de la parrilla costal y el signo de la charretera."
+                    },
+                    {
+                        "pregunta": "20. En caso de que la luxación lleve más de 24 horas de evolución, ¿qué maniobra de reducción cerrada está específicamente indicada y cuáles son sus 4 pasos secuenciales?",
+                        "opA": "Maniobra de Hipócrates (pie en axila y tracción de muñeca).",
+                        "opB": "Maniobra de Kocher: a) tracción en el eje del brazo, b) rotación externa, c) aducción y d) rotación interna.",
+                        "opC": "Maniobra de Mothes (tracción con sábana).",
+                        "opD": "Fijación externa inmediata.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 25 y texto Maniobras de Reducción), la Maniobra de Kocher se indica en casos con más de 24 horas de evolución y consta de 4 pasos cuidadosos: tracción en el eje, rotación externa, aducción y rotación interna."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 40 años que ingresa a urgencias tras presentar una crisis convulsiva tónico-clónica generalizada. A la exploración física refiere dolor severo e incapacidad para mover el hombro izquierdo, el cual se encuentra fijado en aducción y rotación interna, sin apreciarse el signo de la charretera. La radiografía anteroposterior inicial resulta dudosa.",
+                "preguntas": [
+                    {
+                        "pregunta": "21. ¿Cuál es el mecanismo fisiopatológico clásico que desencadena una luxación posterior de hombro?",
+                        "opA": "Trauma directo sobre el acromion con el brazo en extensión.",
+                        "opB": "Contracciones musculares violentas secundarias a descargas eléctricas o crisis convulsivas con el brazo en aducción y rotación interna.",
+                        "opC": "Caída sobre la palma de la mano en abducción pura.",
+                        "opD": "Tracción longitudinal brusca del brazo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el texto de Luxación Posterior de Hombro (Pasajes 25 y 26), su mecanismo característico son contracciones musculares violentas por descargas eléctricas o crisis convulsivas con el brazo en aducción y rotación interna."
+                    },
+                    {
+                        "pregunta": "22. ¿Qué porcentaje aproximado de las luxaciones de hombro representan las luxaciones posteriores y cuál es su característica diagnóstica habitual?",
+                        "opA": "Representan el 85-90% y se diagnostican fácilmente.",
+                        "opB": "Representan solo el 10-15% de los casos y son frecuentemente infradiagnosticadas.",
+                        "opC": "Representan el 50% de las luxaciones traumatológicas.",
+                        "opD": "Ocurren únicamente en recién nacidos.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En los Pasajes 25 y 26, las luxaciones posteriores son raras (~10-15% del total de luxaciones de hombro) y son frecuentemente infradiagnosticadas en la evaluación inicial."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Ciclista de 28 años que sufre caída de la bicicleta impactando el hombro izquierdo contra el pavimento. A la exploración física presenta dolor localizado sobre la articulación acromioclavicular con ascenso evidente del extremo distal de la clavícula. Al presionar hacia abajo el extremo clavicular prominente, este se reduce temporalmente, descendiendo como la tecla de un piano.",
+                "preguntas": [
+                    {
+                        "pregunta": "23. En este paciente con luxación acromioclavicular completa y deformidad reducible ('signo de la tecla'), ¿cuáles ligamentos se encuentran totalmente rotos?",
+                        "opA": "Únicamente el ligamento acromioclavicular superior.",
+                        "opB": "Ligamentos acromioclaviculares y ligamentos coracoclaviculares (conoide y trapezoide).",
+                        "opC": "Ligamento glenoideo y esternoclavicular.",
+                        "opD": "Ligamento coracoacromial exclusivamente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el texto de Luxación Acromioclavicular (Pasajes correspondientes), la luxación completa con signo de la tecla se produce por la rotura combinada de los ligamentos acromioclaviculares y coracoclaviculares (conoide y trapezoide)."
+                    },
+                    {
+                        "pregunta": "24. ¿Cuál es el tratamiento indicado según las fuentes para la subluxación acromioclavicular versus la luxación completa?",
+                        "opA": "Subluxación requiere cirugía; luxación completa solo reposo.",
+                        "opB": "Subluxación se trata con vendaje compresor para reducir la clavícula; en luxación completa está indicado el tratamiento quirúrgico.",
+                        "opC": "Ambas requieren reemplazo protésico inmediato.",
+                        "opD": "Ambas se tratan exclusivamente con fijador externo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el Pasaje correspondiente a Luxación Acromioclavicular, en la subluxación es suficiente la colocación de un vendaje compresor, mientras que en la luxación completa está indicado el tratamiento quirúrgico."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente de 35 años que sufre accidente automovilístico sufriendo traumatismo en brazo derecho. Presenta dolor severo, deformidad, crepitación e impotencia funcional en tercio medio del húmero. A la exploración neurológica destaca incapacidad para realizar la dorsoflexión de la muñeca y de los dedos de la mano derecha ('mano caída'), así como hipoestesia en el dorso del primer espacio interdigital.",
+                "preguntas": [
+                    {
+                        "pregunta": "25. ¿Qué estructura nerviosa periférica se encuentra lesionada en esta fractura de la diáfisis humeral y cuál es su tasa de asociación relatada en las fuentes?",
+                        "opA": "Nervio mediano en un 30%.",
+                        "opB": "Nervio radial en un 11% de los casos.",
+                        "opC": "Nervio cubital en un 5%.",
+                        "opD": "Nervio axilar en un 50%.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el texto de Fractura de Diáfisis Humeral (Pasajes 26 y 27), la fractura de la diáfisis humeral se asocia en un 11% de los casos a lesión del nervio radial, provocando incapacidad para la dorsoflexión de muñeca y dedos (mano caída)."
+                    },
+                    {
+                        "pregunta": "26. ¿Cuáles son las indicaciones de tratamiento quirúrgico en fracturas de la diáfisis humeral según las fuentes?",
+                        "opA": "Todas las fracturas cerradas no desplazadas.",
+                        "opB": "Fracturas abiertas, angulación mayor a 20-30 grados o acortamiento mayor a 2-3 cm.",
+                        "opC": "Cualquier fractura en niños menores de 5 años.",
+                        "opD": "Fracturas con consolidación menor a 3 semanas.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasajes 26 y 27), la mayoría de las fracturas de diáfisis humeral se manejan conservadoramente, estando indicada la cirugía ante fractura abierta, angulación > 20-30° o acortamiento > 2-3 cm."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 16 años que sufre caída durante entrenamiento deportivo, apoyando el hombro directamente. Presenta dolor localizado en la cintura escapular derecha y deformidad evidente en tercio medio de la clavícula. El fragmento proximal se palpa palpablemente desplazado hacia arriba, mientras que el hombro y el fragmento distal caen por el peso del miembro.",
+                "preguntas": [
+                    {
+                        "pregunta": "27. En las fracturas desplazadas de clavícula en el adulto/adolescente, ¿qué músculo tracciona hacia arriba el fragmento proximal?",
+                        "opA": "Pectoral mayor.",
+                        "opB": "Esternocleidomastoideo.",
+                        "opC": "Subclavio.",
+                        "opD": "Trapecio inferior.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el texto de Fracturas de Clavícula (Pasaje 15), el fragmento proximal se desplaza hacia arriba traccionado por la acción del músculo esternocleidomastoideo y el distal hacia abajo por el peso del brazo."
+                    },
+                    {
+                        "pregunta": "28. ¿Cuál es el método de tratamiento ortopédico más utilizado para mantener el hombro hacia arriba y atrás en las fracturas de clavícula?",
+                        "opA": "Yeso toracobraquial de Merva.",
+                        "opB": "Vendaje en 8.",
+                        "opC": "Fijación con placa de compresión obligatoria.",
+                        "opD": "Tracción esquelética transolecraneana.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 15 y texto Fracturas de Clavícula), el tratamiento ortopédico es fundamental y el método más utilizado es el vendaje en 8."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente adulto sometido a reducción abierta y fijación interna con Placa de Compresión rígida por fractura articular desplazada de tobillo. En los controles radiográficos de seguimiento a los 3 y 6 meses se aprecia una correcta unión cortical directa de la fractura, sin observarse en ningún momento la formación de callo óseo externo perióstico.",
+                "preguntas": [
+                    {
+                        "pregunta": "29. ¿Cuáles son las dos condiciones biomecánicas y biológicas indispensables para que ocurra esta consolidación ósea primaria o directa?",
+                        "opA": "Estabilidad relativa y strain entre 2% y 10%.",
+                        "opB": "Estabilidad absoluta (ausencia de micromovimiento) y reducción anatómica perfecta (brecha <0.1 mm).",
+                        "opC": "Inmovilización con férula de yeso y micromovimiento continuo.",
+                        "opD": "Formación extensa de fibrocartílago intermedio.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el tema de Consolidación Ósea Primaria (Pasaje 5), se especifica que esta ocurre únicamente ante dos condiciones estrictas: estabilidad absoluta (ausencia de micromovimiento) y reducción anatómica perfecta (brecha <0.1 mm)."
+                    },
+                    {
+                        "pregunta": "30. ¿Qué dispositivo de osteosíntesis garantiza la estabilidad absoluta eliminando todo micromovimiento para lograr consolidación primaria?",
+                        "opA": "Placa puente o tutor.",
+                        "opB": "Placa de compresión / bloqueo.",
+                        "opC": "Fijador externo elástico.",
+                        "opD": "Tracción cutánea continua.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el Pasaje 10, la placa de compresión/bloqueo otorga estabilidad absoluta al hueso, eliminando todo micromovimiento y permitiendo una consolidación primaria directa sin callo."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 22 años intervenido quirúrgicamente mediante un Clavo Endomedular bloqueado por fractura diafisaria de fémur. Las radiografías de control a las 6 semanas muestran la formación progresiva de una masa de tejido de reparación (callo óseo perióstico) que puentea y estabiliza biológicamente el foco de fractura.",
+                "preguntas": [
+                    {
+                        "pregunta": "31. ¿Qué tipo de consolidación se está llevando a cabo y cuál es el rango de deformación (strain) en el foco que estimula este proceso?",
+                        "opA": "Consolidación primaria; strain < 0.1%.",
+                        "opB": "Consolidación secundaria (indirecta); strain entre el 2% y el 10%.",
+                        "opC": "Seudoartrosis no vascularizada; strain > 20%.",
+                        "opD": "Osificación intramembranosa pura; strain 0%.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según los Pasajes 6, 9 y 11, la consolidación secundaria ocurre con estabilidad relativa, donde el micromovimiento mantenido en un strain del 2% al 10% estimula la formación de callo óseo mediante osificación endocondral."
+                    },
+                    {
+                        "pregunta": "32. ¿Cómo actúa mecánicamente el clavo endomedular en el canal medular y qué función cumplen sus pernos cruzados?",
+                        "opA": "Actúa como placa rígida articular; los pernos aumentan la brecha entre fragmentos.",
+                        "opB": "Actúa como tutor interno controlando las fuerzas de flexión; los pernos de bloqueo evitan el acortamiento y la rotación fuera de eje.",
+                        "opC": "Destruye la vascularización impidiendo la consolidación.",
+                        "opD": "Se utiliza exclusivamente para compresión estática articular.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el Pasaje 11, el clavo endomedular actúa como tutor interno controlando fuerzas de flexión, mientras que los pernos o tornillos de bloqueo en los extremos evitan que el hueso se acorte o rote fuera de eje."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente de 42 años que sufrió fractura diafisaria de tibia tratada mediante inmovilización con yeso. Acude a consulta 8 meses después del traumatismo. Clínicamente no refiere dolor severo pero la extremidad se siente inestable al apoyo. En la serie radiográfica actual no se observa puente óseo y al compararla con la radiografía tomada hace 3 meses no se evidencia ningún avance ni cambio en el proceso de reparación.",
+                "preguntas": [
+                    {
+                        "pregunta": "33. De acuerdo con las definiciones del manual, ¿cuál es la impresión diagnóstica formal de esta complicación?",
+                        "opA": "Consolidación ósea primaria.",
+                        "opB": "Retardo de consolidación pasajero.",
+                        "opC": "Seudoartrosis (No Unión).",
+                        "opD": "Consolidación viciosa en ángulo agudo.",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "En las fuentes (Pasaje 14), la Seudoartrosis (No Unión) se declara formalmente cuando han pasado entre 6 y 9 meses desde la fractura y no se han observado avances ni cambios radiográficos durante los últimos 3 meses."
+                    },
+                    {
+                        "pregunta": "34. ¿Qué diferencia al Retardo de Consolidación de la Seudoartrosis según el texto?",
+                        "opA": "En el retardo han pasado más de 2 años.",
+                        "opB": "En el retardo no ha pegado en el tiempo esperado (3-6 meses), pero la biología del hueso muestra señales de continuar intentando reparar.",
+                        "opC": "El retardo requiere amputación inmediata.",
+                        "opD": "La seudoartrosis cursa siempre con infección bacteriana activa.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el Pasaje 14, el retardo de consolidación ocurre cuando la fractura no consolida en el tiempo esperado (3 a 6 meses), pero los tejidos muestran señales biológicas activas de seguir intentando reparar el hueso."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 48 años, agricultor, que sufre machacamiento de la pierna izquierda por una máquina cosechadora en una hacienda agrícola. Presenta herida de 15 cm con grave contaminación por tierra y estiércol, fractura conminuta de tibia con pérdida parcial de periostio pero manteniendo cobertura cutánea razonable tras debridamiento. Pulsos distales presentes.",
+                "preguntas": [
+                    {
+                        "pregunta": "35. Dada la contaminación severa con tierra y estiércol en un área rural (riesgo de bacterias anaerobias / Clostridium), ¿qué antibiótico debe agregarse obligatoriamente al esquema profiláctico de Cefalosporina + Aminoglucósido?",
+                        "opA": "Ciprofloxacino oral.",
+                        "opB": "Penicilina G o Metronidazol.",
+                        "opC": "Vancomicina en infusión rápida.",
+                        "opD": "Fluconazol.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 21, Cuadro 45-1-2), cuando existe contaminación con tierra o estiércol se debe adicionar Penicilina G o Metronidazol al esquema de Cefalosporina de 1.ª generación y Aminoglucósido para cubrir anaerobios como Clostridium."
+                    },
+                    {
+                        "pregunta": "36. En el manejo local inicial de urgencias de la herida antes del traslado al quirófano, ¿cuál es la conducta correcta referente al hueso expuesto?",
+                        "opA": "Introducir de inmediato los fragmentos óseos expuestos dentro de la herida.",
+                        "opB": "No introducir el hueso expuesto; retirar únicamente contaminación gruesa superficial, cubrir con gasas estériles impregnadas en solución salina e inmovilizar.",
+                        "opC": "Aplicar alcohol y antisépticos yodosos directamente sobre la médula ósea.",
+                        "opD": "Lavar con abundante agua corriente sin inmovilizar.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con las recomendaciones de Manejo Local de Urgencias (Pasajes 20 y 21), la norma estricta es NO introducir el hueso expuesto, retirar solo contaminación gruesa superficial, cubrir con gasas estériles impregnadas en solución salina e inmovilizar con férula."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 38 años trasladado a la sala de trauma tras sufrir caída de 4 metros de altura e impactar de nalgas. A la exploración física se encuentra consciente pero con parálisis flácida de miembros inferiores, alteración de esfínteres (retención aguda de orina e incompentencia anal) y anestesia completa en la región perineal y perianal ('anestesia en silla de montar').",
+                "preguntas": [
+                    {
+                        "pregunta": "37. ¿Cuál es el diagnóstico sintomático del síndrome medular que presenta el paciente?",
+                        "opA": "Síndrome Medular Anterior.",
+                        "opB": "Síndrome de Cono Medular.",
+                        "opC": "Síndrome Medular Central.",
+                        "opD": "Síndrome de Brown-Séquard.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasajes 31, 32 y tabla de síndromes medulares), el Síndrome de Cono Medular afecta la porción terminal de la médula y se caracteriza específicamente por anestesia en silla de montar y alteración de esfínteres."
+                    },
+                    {
+                        "pregunta": "38. En la evaluación inicial (protocolo ATLS) de todo paciente con traumatismo raquimedular, ¿cuál es la prioridad inmediata absoluta?",
+                        "opA": "Realizar tomografía con contraste inmediatamente.",
+                        "opB": "Garantizar la permeabilidad de la vía aérea, ventilación y circulación (ABC) e inmovilizar el cuello con collarín y columna sobre tabla rígida.",
+                        "opC": "Iniciar tracción esquelética con clavo de Steinmann.",
+                        "opD": "Administrar relajantes musculares orales.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En la sección de Evaluación Inicial ATLS (Pasajes 20, 28 y Cuadro de exploración inicial TRM), la prioridad es valorar rápidamente ABC (vía aérea, ventilación y circulación) e inmovilizar el cuello con collarín y la columna sobre tabla rígida."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 30 años que acude a la consulta de Traumatología para valoración por lumbalgia recurrente. Durante la exploración física de la postura, el médico utiliza la línea de plomada imaginaria. En la vista lateral se evalúan los puntos de alineamiento óseo y en el interrogatorio del dolor actual se aplica una mnemotecnia sistemática para evaluar sus características.",
+                "preguntas": [
+                    {
+                        "pregunta": "39. En la evaluación postural desde la vista lateral con plomada imaginaria, ¿por qué puntos anatómicos debe pasar la línea para considerarse alineada?",
+                        "opA": "Glabela, esternón y sínfisis del pubis.",
+                        "opB": "Apófisis mastoides, hombro, trocánter mayor y maléolo lateral.",
+                        "opC": "Escápula, pliegue glúteo y espacio poplíteo.",
+                        "opD": "Conducto auditivo interno y primer metatarsiano.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En las fuentes (Pasaje 16), en la vista lateral de la exploración postural la plomada evalúa el alineamiento pasando por la apófisis mastoides, el hombro, el trocánter mayor y el maléolo lateral."
+                    },
+                    {
+                        "pregunta": "40. En el interrogatorio del Padecimiento Actual de la Historia Clínica traumatológica, ¿qué mnemotecnia se utiliza para indagar sistemáticamente el dolor (Antigüedad, Localización, Intensidad, Carácter, Irradiación, Atenuantes)?",
+                        "opA": "SAMPLE",
+                        "opB": "ALICIA",
+                        "opC": "OPQRST",
+                        "opD": "GLASGOW",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con el apartado de Historia Clínica (Pasajes 2 y 15), el interrogatorio sistemático del dolor motivo de consulta utiliza la mnemotecnia ALICIA."
+                    }
+                ]
+            }
+        ];
+
+
+        // Normalización de la estructura de Casos Clínicos a una lista plana de preguntas
+        function obtenerPreguntasDeCasos(casos) {
+            let preguntasProcesadas = [];
+            casos.forEach(caso => {
+                caso.preguntas.forEach(p => {
+                    preguntasProcesadas.push({
+                        ...p,
+                        explicacionCaso: caso.explicacionCaso
+                    });
+                });
+            });
+            return preguntasProcesadas;
+        }
+
+        let modoActual = 'preguntas'; // 'preguntas' o 'casos'
+        let listaActual = mockPreguntas;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        const questionCounter = document.getElementById("question-counter");
+        const scoreCounter = document.getElementById("score-counter");
+        const progressBar = document.getElementById("progress-bar");
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const feedbackContainer = document.getElementById("feedback-container");
+        const feedbackTitle = document.getElementById("feedback-title");
+        const feedbackText = document.getElementById("feedback-text");
+        const nextBtn = document.getElementById("next-btn");
+        const quizContainer = document.getElementById("quiz-container");
+        const resultsCard = document.getElementById("results-card");
+        const caseContainer = document.getElementById("case-container");
+        const caseDescription = document.getElementById("case-description");
+        const modeQuestionsBtn = document.getElementById("mode-questions-btn");
+        const modeCasesBtn = document.getElementById("mode-cases-btn");
+
+        function cambiarModo(nuevoModo) {
+            modoActual = nuevoModo;
+            if (modoActual === 'preguntas') {
+                listaActual = mockPreguntas;
+                modeQuestionsBtn.className = "btn btn-primary btn-mode";
+                modeCasesBtn.className = "btn btn-outline-primary btn-mode";
+            } else {
+                listaActual = obtenerPreguntasDeCasos(mockCasos);
+                modeQuestionsBtn.className = "btn btn-outline-primary btn-mode";
+                modeCasesBtn.className = "btn btn-primary btn-mode";
+            }
+            reiniciarQuiz();
+        }
+
+        function cargarPregunta() {
+            answered = false;
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+
+            const currentData = listaActual[currentQuestionIndex];
+
+            // Renderizar caso clínico si aplica
+            if (currentData.explicacionCaso) {
+                caseDescription.innerText = currentData.explicacionCaso;
+                caseContainer.classList.remove("d-none");
+            } else {
+                caseContainer.classList.add("d-none");
+            }
+
+            questionCounter.innerText = `Pregunta ${currentQuestionIndex + 1} de ${listaActual.length}`;
+            scoreCounter.innerText = `Aciertos: ${score}`;
+            const progressPercent = ((currentQuestionIndex) / listaActual.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            questionText.innerText = currentData.pregunta;
+            optionsContainer.innerHTML = "";
+
+            const opcionesMap = [
+                { key: "opA", text: currentData.opA },
+                { key: "opB", text: currentData.opB },
+                { key: "opC", text: currentData.opC },
+                { key: "opD", text: currentData.opD }
+            ];
+
+            opcionesMap.forEach(op => {
+                const btn = document.createElement("button");
+                btn.className = "btn btn-outline-secondary option-btn";
+                btn.innerHTML = `<strong>${op.key.replace('op', '').toUpperCase()}.</strong> ${op.text}`;
+                btn.onclick = () => seleccionarRespuesta(op.key, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function seleccionarRespuesta(opcionSeleccionada, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const currentData = listaActual[currentQuestionIndex];
+            const botones = optionsContainer.getElementsByTagName("button");
+
+            for (let btn of botones) {
+                btn.disabled = true;
+            }
+
+            if (opcionSeleccionada === currentData.respuestaCorrecta) {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("correct-answer");
+                score++;
+                scoreCounter.innerText = `Aciertos: ${score}`;
+
+                feedbackTitle.innerText = "¡Correcto! 🎉";
+                feedbackContainer.className = "alert alert-success mt-3";
+            } else {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("incorrect-answer");
+
+                for (let btn of botones) {
+                    if (btn.innerHTML.startsWith(`<strong>${currentData.respuestaCorrecta.replace('op', '').toUpperCase()}.</strong>`)) {
+                        btn.classList.remove("btn-outline-secondary");
+                        btn.classList.add("correct-answer");
+                    }
+                }
+
+                feedbackTitle.innerText = "Incorrecto ❌";
+                feedbackContainer.className = "alert alert-danger mt-3";
+            }
+
+            feedbackText.innerText = currentData.explicacion;
+            feedbackContainer.classList.remove("d-none");
+            nextBtn.classList.remove("d-none");
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < listaActual.length) {
+                cargarPregunta();
+            } else {
+                mostrarResultados();
+            }
+        };
+
+        function mostrarResultados() {
+            quizContainer.classList.add("d-none");
+            caseContainer.classList.add("d-none");
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+            progressBar.style.width = "100%";
+
+            document.getElementById("final-score").innerText = `Tu calificación final es: ${score} de ${listaActual.length} aciertos`;
+            resultsCard.classList.remove("d-none");
+        }
+
+        function reiniciarQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultsCard.classList.add("d-none");
+            quizContainer.classList.remove("d-none");
+            cargarPregunta();
+        }
+
+        // Carga Inicial
+        cargarPregunta();
+    </script>
+    <script src="../pwa.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3869c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./images/icons/icon-192x192.png">
+    <title>Simulador de Examenes| Cuestionarios</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: #172033;
+            background: #f4f7fb;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 48px 20px;
+            display: grid;
+            place-items: center;
+            background:
+                radial-gradient(ellipse at top left, #e1edff 0, transparent 42%),
+                #f4f7fb;
+        }
+
+        main {
+            width: min(100%, 860px);
+        }
+
+        .intro {
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        .love-note {
+            margin: 0 0 22px;
+            color: #3869c8;
+            font-size: 1.08rem;
+            text-align: center;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: #3869c8;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 5vw, 3rem);
+            letter-spacing: -0.04em;
+        }
+
+        .intro p:last-child {
+            margin: 12px 0 0;
+            color: #657089;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .quiz-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .quiz-card {
+            display: flex;
+            min-height: 190px;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 26px;
+            border: 1px solid #e3e9f2;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 12px 32px rgb(30 55 90 / 7%);
+            color: inherit;
+            text-decoration: none;
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        }
+
+        .quiz-card:hover {
+            transform: translateY(-3px);
+            border-color: #b8cdf4;
+            box-shadow: 0 18px 38px rgb(30 55 90 / 12%);
+        }
+
+        .quiz-card:focus-visible {
+            outline: 3px solid #3869c8;
+            outline-offset: 4px;
+        }
+
+        .icon {
+            display: grid;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 20px;
+            place-items: center;
+            border-radius: 14px;
+            background: #edf3ff;
+            color: #3869c8;
+            font-size: 1.45rem;
+        }
+
+        .quiz-card h2 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+
+        .quiz-card p {
+            margin: 9px 0 0;
+            color: #657089;
+            line-height: 1.5;
+        }
+
+        .open-link {
+            margin-top: auto;
+            padding-top: 22px;
+            color: #285bb9;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        footer {
+            margin-top: 28px;
+            color: #8791a5;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+
+        .install-dialog {
+            width: min(calc(100% - 32px), 440px);
+            padding: 0;
+            border: 1px solid #e3e9f2;
+            border-radius: 20px;
+            background: #fff;
+            color: #172033;
+            box-shadow: 0 24px 70px rgb(30 55 90 / 24%);
+        }
+
+        .install-dialog::backdrop {
+            background: rgb(23 32 51 / 52%);
+            backdrop-filter: blur(3px);
+        }
+
+        .install-content {
+            padding: 28px;
+            text-align: center;
+        }
+
+        .install-love {
+            margin: 0 0 20px;
+            color: #3869c8;
+            font-size: 1.05rem;
+        }
+
+        .install-content h2 {
+            margin: 0;
+            font-size: 1.45rem;
+        }
+
+        .install-description {
+            margin: 12px 0 22px;
+            color: #657089;
+            line-height: 1.6;
+        }
+
+        .install-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .install-actions button {
+            min-height: 44px;
+            padding: 10px 16px;
+            border: 1px solid #3869c8;
+            border-radius: 12px;
+            background: #3869c8;
+            color: #fff;
+            cursor: pointer;
+            font: inherit;
+            font-weight: 700;
+        }
+
+        .install-actions .install-close {
+            border-color: #e3e9f2;
+            background: #fff;
+            color: #657089;
+        }
+
+        .install-actions button:focus-visible {
+            outline: 3px solid rgb(56 105 200 / 35%);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 36px 16px;
+            }
+
+            .quiz-list {
+                grid-template-columns: 1fr;
+            }
+
+            .quiz-card {
+                min-height: 170px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"
+        aria-describedby="install-description">
+        <div class="install-content">
+            <p class="install-love"><strong><em>Hola preciosa, espero te sirva. Te amo</em></strong></p>
+            <h2 id="install-title">Descarga la aplicación</h2>
+            <p id="install-description" class="install-description">
+                Instala la aplicación para abrir tus cuestionarios y usarlos sin conexión.
+            </p>
+            <div class="install-actions">
+                <button id="install-app-button" type="button">Descargar aplicación</button>
+                <button id="install-close-button" class="install-close" type="button">Ahora no</button>
+            </div>
+        </div>
+    </dialog>
+
+    <main>
+        <header class="intro">
+            <p class="love-note"><strong><em>Te amo, suerte en tus estudios, tú puedes ❤️</em></strong></p>
+            <p class="eyebrow">Tu espacio de estudio</p>
+            <h1>Cuestionarios</h1>
+            <p>Elige una materia para comenzar a practicar.</p>
+        </header>
+
+        <nav class="quiz-list" id="quiz-list" aria-label="Cuestionarios disponibles"></nav>
+
+        <footer>Selecciona una tarjeta para abrir el cuestionario.</footer>
+    </main>
+
+    <script>
+        const cuestionarios = [
+            {
+                titulo: "Medicina Legal 9° P2",
+                descripcion: "Practica con el cuestionario de Medicina Legal.",
+                icono: "⚖",
+                archivo: "Cuestionarios/MedLegal%205_2.html"
+            },
+            {
+                titulo: "Psiquiatría 9° P2",
+                descripcion: "Practica con el cuestionario de Psiquiatría.",
+                icono: "🧠",
+                archivo: "Cuestionarios/Psiquiatria%205_2.html"
+            }
+        ];
+
+        const listaCuestionarios = document.querySelector("#quiz-list");
+
+        cuestionarios.forEach((cuestionario) => {
+            const tarjeta = document.createElement("a");
+            tarjeta.className = "quiz-card";
+            tarjeta.href = cuestionario.archivo;
+
+            const icono = document.createElement("span");
+            icono.className = "icon";
+            icono.setAttribute("aria-hidden", "true");
+            icono.textContent = cuestionario.icono;
+
+            const titulo = document.createElement("h2");
+            titulo.textContent = cuestionario.titulo;
+
+            const descripcion = document.createElement("p");
+            descripcion.textContent = cuestionario.descripcion;
+
+            const abrir = document.createElement("span");
+            abrir.className = "open-link";
+            abrir.append("Abrir cuestionario ");
+
+            const flecha = document.createElement("span");
+            flecha.setAttribute("aria-hidden", "true");
+            flecha.textContent = "→";
+            abrir.append(flecha);
+
+            tarjeta.append(icono, titulo, descripcion, abrir);
+            listaCuestionarios.append(tarjeta);
+        });
+    </script>
+    <script src="./pwa.js" defer></script>
+</body>
+
+</html>

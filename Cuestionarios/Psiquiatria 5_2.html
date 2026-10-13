@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3869c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../images/icons/icon-192x192.png">
+    <!-- //-------------EDITAR: cambia el título para identificar la nueva materia. -->
+    <title>Simulador de Examen - Psiquiatria</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"
+        aria-describedby="install-description">
+        <div class="install-content">
+            <p class="install-love"><strong><em>Hola preciosa, espero te sirva. Te amo</em></strong></p>
+            <h2 id="install-title">Descarga la aplicación</h2>
+            <p id="install-description" class="install-description">
+                Instala la aplicación para abrir tus cuestionarios y usarlos sin conexión.
+            </p>
+            <div class="install-actions">
+                <button id="install-app-button" type="button">Descargar aplicación</button>
+                <button id="install-close-button" class="install-close" type="button">Ahora no</button>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="container">
+        <a class="btn btn-outline-primary home-button" href="../index.html">
+            <span>< Volver al inicio</span>
+        </a>
+
+        <div class="offline-actions">
+            <!-- //-------------EDITAR: cambia esta ruta para que coincida con el nombre del archivo duplicado. -->
+            <button id="offline-toggle" class="btn btn-outline-primary" type="button"
+                data-offline-url="../Cuestionarios/Psiquiatria%205_2.html" disabled>
+                Preparar para usar sin conexión
+            </button>
+            <p id="offline-status" class="offline-status" role="status" aria-live="polite">
+                Comprobando el acceso sin conexión...
+            </p>
+        </div>
+
+        <div class="text-center mb-3">
+            <h2 class="fw-bold text-primary">Simulador</h2>
+            <p class="text-muted">Pon a prueba tus conocimientos paso a paso</p>
+        </div>
+
+        <!-- Controles para seleccionar modalidad -->
+        <div class="mode-selector">
+            <button id="mode-questions-btn" class="btn btn-primary btn-mode"
+                onclick="cambiarModo('preguntas')">Preguntas Directas</button>
+            <button id="mode-cases-btn" class="btn btn-outline-primary btn-mode" onclick="cambiarModo('casos')">Casos
+                Clínicos</button>
+        </div>
+
+        <div class="card-quiz">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span id="question-counter" class="badge bg-secondary">Pregunta 1 de X</span>
+                <span id="score-counter" class="badge bg-success">Aciertos: 0</span>
+            </div>
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <!-- Caja para la descripción del caso clínico (Oculta por defecto) -->
+            <div id="case-container" class="case-card d-none">
+                <h5 class="fw-bold mb-2">📌 Caso Clínico:</h5>
+                <p id="case-description"></p>
+            </div>
+
+            <div id="quiz-container">
+                <h4 id="question-text" class="fw-bold mb-4 text-dark">Cargando pregunta...</h4>
+
+                <div class="options-grid mb-4" id="options-container">
+                </div>
+            </div>
+
+            <div id="feedback-container" class="alert d-none mt-3">
+                <h5 id="feedback-title" class="fw-bold mb-1"></h5>
+                <p id="feedback-text"></p>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button id="next-btn" class="btn btn-primary btn-lg d-none">Siguiente Pregunta</button>
+            </div>
+
+        </div>
+
+        <div id="results-card" class="card-quiz text-center d-none mt-4">
+            <h3 class="fw-bold text-success mb-3">¡Simulador Finalizado!</h3>
+            <p class="mb-2">Has completado todas las preguntas.</p>
+            <h4 id="final-score" class="fw-bold text-primary mb-4"></h4>
+            <button onclick="reiniciarQuiz()" class="btn btn-outline-primary btn-lg">Volver a Intentar</button>
+        </div>
+    </div>
+
+    <script>
+
+
+        //-------------EDITAR: reemplaza este arreglo con las preguntas directas de la nueva materia.
+        const mockPreguntas = [
+            {
+                "pregunta": "1. Un hombre de 42 años acude a consulta por presentar un estado de ánimo deprimido la mayor parte del día, anhedonia casi total, insomnio de mantenimiento y pérdida del 8% de su peso corporal en el último mes. Según el DSM-5, para confirmar el diagnóstico de Trastorno Depresivo Mayor (TDM), ¿cuál de los siguientes criterios temporales y sintomáticos es indispensable?",
+                "opA": "Presencia de al menos 3 síntomas afectivos durante un mínimo de 1 semana consecutiva.",
+                "opB": "Presencia de al menos 5 síntomas de la lista de criterios durante al menos 2 semanas, siendo al menos uno de ellos ánimo deprimido o anhedonia.",
+                "opC": "Presencia de tristeza persistente durante al menos 2 años sin periodos sintomáticos mayores a 2 meses.",
+                "opD": "Presencia de labilidad afectiva e irritabilidad intensa restringida a la fase lútea del ciclo menstrual.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con la fuente (PSIQUIATRÍA.pdf, sección 'Trastorno Depresivo Mayor' y DSM-5), el diagnóstico de TDM requiere un episodio de al menos 2 semanas de duración en el que estén presentes un mínimo de 5 síntomas de la lista estandarizada, donde obligatoriamente uno de los síntomas cardinales debe ser el estado de ánimo deprimido o la pérdida de interés o placer (anhedonia)."
+            },
+            {
+                "pregunta": "2. Una paciente de 28 años refiere sentirse 'triste y pesimista desde que tiene memoria', acumulando más de 3 años continuos con baja autoestima, astenia e indecisión, sin haber cumplido nunca criterios para un episodio maníaco o hipomaníaco. ¿Cuál es el diagnóstico más probable de acuerdo con la clasificación del DSM-5/CIE-11?",
+                "opA": "Trastorno de Desregulación Disruptiva del Estado de Ánimo.",
+                "opB": "Trastorno Depresivo Persistente (Distimia).",
+                "opC": "Trastorno Ciclotímico.",
+                "opD": "Trastorno Depresivo Mayor con patrón estacional.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Trastorno Depresivo Persistente (Distimia) se define en las fuentes (PSIQUIATRÍA.pdf) como un estado de ánimo depresivo casi continuo durante al menos 2 años en adultos (1 año en niños/adolescentes), con síntomas de menor intensidad que un TDM pero de curso crónico y persistente."
+            },
+            {
+                "pregunta": "3. En relación con el Trastorno de Disforia Premenstrual (TDPM), ¿cuál es el esquema psicofarmacológico de primera línea y la combinación anticonceptiva aprobada específicamente para su tratamiento según las fuentes clínicas?",
+                "opA": "Valproato de sodio continuo + Anticonceptivos con levonorgestrel/etinilestradiol.",
+                "opB": "ISRS (ej. Sertralina o Fluoxetina) intermitente en fase lútea o continuo + Anticonceptivo con Drospirenona (3 mg) / Etinilestradiol (20 µg).",
+                "opC": "Tricíclicos a dosis altas en la fase folicular + Acetato de medroxiprogesterona.",
+                "opD": "Benzodiacepinas de vida media larga administradas únicamente durante la menstruación.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se especifica que para el TDPM los fármacos de primera línea son los ISRS (Sertralina 50-100 mg, Fluoxetina 20 mg o Paroxetina) administrados de forma continua o desde el día 14 del ciclo (fase lútea) hasta el inicio del sangrado. Además, la combinación anticonceptiva aprobada es Drospirenona (3 mg) con Etinilestradiol (20 µg) en régimen 24/4."
+            },
+            {
+                "pregunta": "4. Un paciente hipertenso y coronariópata de 55 años inicia tratamiento con un betabloqueador lipofílico e interferón alfa. Un mes después desarrolla sintomatología depresiva grave con ideación suicida. ¿Cómo se clasifica etiológicamente este cuadro y qué estrategia inicial se indica?",
+                "opA": "Trastorno Depresivo Debido a Otra Afección Médica; se debe instaurar Terapia Electroconvulsiva inmediata.",
+                "opB": "Trastorno Depresivo Inducido por Medicamentos; requiere retirar o sustituir la sustancia causal y, si persisten los síntomas, iniciar un ISRS o Bupropión.",
+                "opC": "Trastorno de Adaptación con estado de ánimo deprimido; no requiere intervención farmacológica.",
+                "opD": "Episodio Depresivo Mayor secundario a déficit de vitamina B12; ajustar dieta únicamente.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según PSIQUIATRÍA.pdf, la depresión inducida por fármacos (como corticoides, interferón o beta-bloqueadores) exige como primera medida la desintoxicación o interrupción/sustitución gradual de la sustancia causal. Si los síntomas persisten o son graves, se indica inicio de ISRS o Bupropión."
+            },
+            {
+                "pregunta": "5. Un varón de 68 años con antecedente de Accidente Cerebrovascular (ACV) isquémico presenta un cuadro depresivo severo con apatía extrema y enlentecimiento psicomotor. ¿En qué localización neuroanatómica del ACV es significativamente más frecuente la aparición de esta 'Depresión Post-Ictus'?",
+                "opA": "Corteza occipital bilateral y cerebelo.",
+                "opB": "Corteza frontal izquierda o ganglios basales.",
+                "opC": "Lóbulo temporal derecho exclusivamente.",
+                "opD": "Tronco encefálico y pedúnculos cerebrales.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el manual de PSIQUIATRÍA.pdf (sección 'Depresión Debido a otra Afección Médica') se destaca que la Depresión Post-Ictus es especialmente frecuente y grave cuando la lesión vascular afecta a la corteza frontal izquierda o los ganglios basales."
+            },
+            {
+                "pregunta": "6. Una paciente femenina de 30 años acude por depresión caracterizada por reactividad del estado de ánimo (su ánimo mejora notablemente ante eventos positivos), hiperfagia con ávida apetencia por carbohidratos, hipersomnia de 12 horas diarias y sensación de pesadez extrema en extremidades ('parálisis plúmbea'). ¿A qué subtipo clínico de depresión corresponden estas características?",
+                "opA": "Depresión Melancólica.",
+                "opB": "Depresión Atípica.",
+                "opC": "Depresión Catatónica.",
+                "opD": "Depresión Psicótica.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Las fuentes (PSIQUIATRÍA.pdf) definen la depresión atípica por la presencia de reactividad afectiva, aumento del apetito/peso (hiperfagia/antojos de carbohidratos), hipersomnia y parálisis plúmbea (sensación de pesadez en brazos y piernas), a diferencia de la melancólica que presenta insomnio tardío y anorexia."
+            },
+            {
+                "pregunta": "7. En contraste con el caso anterior, un paciente con depresión melancólica severa presenta cuál de los siguientes patrones sintomáticos distintivos:",
+                "opA": "Aumento del apetito, empeoramiento por las tardes e hipersomnia.",
+                "opB": "Ausencia de reactividad del estado de ánimo, insomnio de despertar precoz (al menos 2 horas antes de lo habitual), empeoramiento matutino de la depresión y culpa excesiva.",
+                "opC": "Labilidad emocional rápida con cambios de humor hora a hora desencadenados por rechazo interpersonal.",
+                "opD": "Síntomas exclusivamente somáticos en ausencia de anhedonia.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El subtipo depresivo melancólico se caracteriza clínicamente en las fuentes (PSIQUIATRÍA.pdf) por anhedonia absoluta o falta de reactividad a estímulos agradables, empeoramiento matutino manifiesto del ánimo, despertar precoz de madrugada, marcada inhibición o agitación psicomotora y culpa desproporcionada."
+            },
+            {
+                "pregunta": "8. De acuerdo con el DSM-5, para establecer el diagnóstico formal de Esquizofrenia, el paciente debe presentar al menos dos síntomas del Criterio A durante un mínimo de 1 mes (de los cuales al menos uno debe ser delirios, alucinaciones o lenguaje desorganizado), y los signos continuos de la alteración deben persistir durante al menos:",
+                "opA": "1 mes.",
+                "opB": "3 meses.",
+                "opC": "6 meses.",
+                "opD": "12 meses.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "Según PSIQUIATRÍA.pdf (sección 'Esquizofrenia - Criterios Diagnósticos'), el diagnóstico exige una fase activa de al menos 1 mes con síntomas positivos/negativos (cumpliendo al menos un síntoma clave entre delirios, alucinaciones o habla desorganizada) y signos continuos del trastorno que duren al menos 6 meses (incluyendo periodos prodromales o residuales)."
+            },
+            {
+                "pregunta": "9. ¿Cuál de las siguientes manifestaciones psicóticas forma parte de los 'Síntomas de Primer Orden' o Sintomatología Schneideriana descritos como altamente característicos de la esquizofrenia en las fuentes?",
+                "opA": "Alucinaciones visuales aisladas al conciliar el sueño (hipnagogia).",
+                "opB": "Robo, inserción, difusión del pensamiento y experiencias de pasividad corporal.",
+                "opC": "Perplejidad y labilidad afectiva transitoria.",
+                "opD": "Ansiedad paranoide que disminuye al aumentar la familiaridad.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se enumeran explícitamente como síntomas de primer orden de Kurt Schneider: eco/pensamiento sonoro, voces que dialogan o comentan la actividad del paciente, experiencias de pasividad/influencia corporal, y vivencias de robo, inserción y difusión/transmisión del pensamiento."
+            },
+            {
+                "pregunta": "10. La hipótesis dopaminérgica clásica de la esquizofrenia explica los síntomas positivos y negativos a través de diferentes alteraciones en las vías cerebrales. ¿Cuál es el patrón neuroquímico correcto señalado en el texto?",
+                "opA": "Hipofunción dopaminérgica mesolímbica y heperactividad mesocortical.",
+                "opB": "Hiperactividad dopaminérgica en la vía mesolímbica ( receptores D2 ) responsable de síntomas positivos, y disfunción/hipofunción en la vía mesocortical vinculada a síntomas negativos y cognitivos.",
+                "opC": "Bloqueo total de la vía nigroestriada sin afectación de la vía tuberoinfundibular.",
+                "opD": "Exceso de dopamina exclusivo en el cerebelo y corteza motora primaria.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La tabla neuroquímica de PSIQUIATRÍA.pdf detalla que la esquizofrenia cursa con hiperactividad mesolímbica (mediada por receptores D2, causante de delirios y alucinaciones) y disfunción o hipodopaminergia mesocortical (asociada a los síntomas negativos y del déficit cognitivo)."
+            },
+            {
+                "pregunta": "11. En los estudios de neuroimagen estructural de pacientes con esquizofrenia de larga evolución, ¿cuál es uno de los hallazgos neuropatológicos más consistentes descritos en las fuentes?",
+                "opA": "Hipertrofia masiva del hipocampo y la amígdala con estrechamiento ventricular.",
+                "opB": "Ventriculomegalia (dilatación de los ventrículos laterales) con reducción del volumen del hipocampo, amígdala y sustancia gris cortical.",
+                "opC": "Calcificación aislada de la glándula pineal sin alteraciones corticales.",
+                "opD": "Aumento del volumen de la corteza prefrontal dorsolateral.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el desglose de neuroanatomía en PSIQUIATRÍA.pdf, los cambios más representativos en la esquizofrenia incluyen ventriculomegalia (dilatación de ventrículos laterales), disminución del volumen del complejo hipocampo-amígdala y reducción generalizada de la sustancia gris cortical."
+            },
+            {
+                "pregunta": "12. Un joven de 19 años comienza con deterioro progresivo de su rendimiento universitario, aislamiento social, comportamiento excéntrico e ideas de referencia leves durante 8 meses antes de presentar su primer brote psicótico franco. ¿A qué fase de la enfermedad corresponde este periodo inicial?",
+                "opA": "Fase Catatónica.",
+                "opB": "Fase Prdrómica.",
+                "opC": "Fase Residual.",
+                "opD": "Fase de Recaída Aguda.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf define la Fase Prodromal como el periodo de meses o años previo al primer episodio psicótico caracterizado por cambios sutiles en la conducta, retraimiento social, deterioro funcional y sintomatología atenuada o ideas de referencia leves."
+            },
+            {
+                "pregunta": "13. ¿Cuál es la principal diferencia mecanicista y de perfil de efectos secundarios entre los antipsicóticos típicos (primera generación, ej. Haloperidol) y los atípicos (segunda generación, ej. Risperidona, Olanzapina)?",
+                "opA": "Los típicos bloquean preferentemente receptores 5-HT2A y los atípicos bloquean exclusivamente receptores GABA-A.",
+                "opB": "Los típicos actúan como antagonistas potentes del receptor D2 dopaminérgico con alto riesgo de síntomas extrapiramidales (SEP), mientras que los atípicos añaden antagonismo del receptor 5-HT2A de serotonina, reduciendo el riesgo de SEP y controlando mejor la esfera afectiva/sintomática.",
+                "opC": "Los atípicos producen hiperprolactinemia en el 100% de los casos y no tienen efecto sobre los síntomas positivos.",
+                "opD": "Los típicos son de elección en el tratamiento de la esquizofrenia resistente tras fallo de clozaipina.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se establece que los antipsicóticos de 1.ª generación (típicos) actúan mediante un antagonismo D2 predominante generando alto riesgo de SEP y discinesia tardía; mientras que los de 2.ª generación (atípicos) combinan el bloqueo D2 con el antagonismo 5-HT2A, lo que modula la liberación de dopamina en la vía estriatal reduciendo los SEP."
+            },
+            {
+                "pregunta": "14. Un paciente diagnosticado con esquizofrenia no ha respondido favorablemente al ensayo adecuado y consecutivo de dos antipsicóticos atípicos diferentes (Risperidona y Olanzapina) a dosis óptimas durante un periodo de tiempo suficiente. ¿Cuál es el tratamiento farmacológico de elección indicado en esta situación de 'Esquizofrenia Resistente' y qué monitoreo analítico estricto requiere?",
+                "opA": "Haloperidol a dosis máximas; monitoreo de creatinquinasa semanal.",
+                "opB": "Clozapina; requiere monitoreo hematológico estricto (recuento de leucocitos y neutrófilos) por riesgo de agranulocitosis.",
+                "opC": "Zuclopentixol decanoato; monitoreo de función tiroidea.",
+                "opD": "Aripiprazol asociado a Litio; monitoreo de niveles de ácido úrico.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según las fuentes de PSIQUIATRÍA.pdf (sección 'Esquizofrenia - Tratamiento'), Clozapina es el fármaco de elección indiscutible para la esquizofrenia refractaria o resistente (tras fallo de 2 antipsicóticos). Debido al riesgo potencialmente letal de agranulocitosis, exige controles hematológicos periódicos obligatorios."
+            },
+            {
+                "pregunta": "15. Una paciente joven en tratamiento antipsicótico presenta galactorrea, amenorrea secundarias y ginecomastia. Entre los antipsicóticos atípicos (2.ª generación), ¿cuál es el agente que con mayor frecuencia se comporta como un típico en términos de elevación marcada de prolactina debido a su potente antagonismo D2 en la vía tuberoinfundibular?",
+                "opA": "Quetiapina.",
+                "opB": "Risperidona.",
+                "opC": "Aripiprazol.",
+                "opD": "Clozapina.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En los esquemas anotados de PSIQUIATRÍA.pdf se resalta que la Risperidona presenta una alta afinidad antagonista D2 y es el antipsicótico atípico que más frecuentemente causa hiperprolactinemia clínicamente relevante (galactorrea, ginecomastia, amenorrea) al actuar sobre la vía tuberoinfundibular."
+            },
+            {
+                "pregunta": "16. ¿Cuál es el mecanismo de acción farmacológico distintivo del Aripiprazol que lo diferencia de la mayoría de los antipsicóticos atípicos convencionales?",
+                "opA": "Antagonista irreversible del receptor muscarínico M1.",
+                "opB": "Agonista parcial de los receptores dopaminérgicos D2 y serotoninérgicos 5-HT1A, junto con antagonismo 5-HT2A.",
+                "opC": "Inhibidor de la monoaminooxidasa tipo A (IMAO-A).",
+                "opD": "Bloqueador selectivo de los canales de calcio N-tipo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Aripiprazol se caracteriza farmacológicamente como un estabilizador del sistema dopaminérgico al actuar como agonista parcial D2 y 5-HT1A, y antagonista 5-HT2A, lo que le confiere un perfil único con bajo riesgo de hiperprolactinemia y aumento de peso, aunque puede asociarse a acatisia."
+            },
+            {
+                "pregunta": "17. Un hombre de 50 años acude convencido de que su esposa le es infiel, presentando una red elaborada de 'pruebas' inconsistentes (acumular tickets de estacionamiento, revisar kilometraje). El paciente mantiene un funcionamiento laboral y social impecable salvo en lo relativo a esta creencia, que ha persistido inamovible durante 4 meses. No presenta alucinaciones ni lenguaje desorganizado. ¿Cuál es el diagnóstico correcto y el subtipo específico?",
+                "opA": "Esquizofrenia paranoide con síntomas negativos.",
+                "opB": "Trastorno Delirante, subtipo celotípico (Síndrome de Otelo).",
+                "opC": "Trastorno Psicótico Agudo con desencadenante grave.",
+                "opD": "Trastorno Esquizotipico de la personalidad.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf define el Trastorno Delirante por la presencia de uno o más delirios de al menos 1 mes de duración con preservación del funcionamiento psicosocial general y ausencia de otros síntomas psicóticos mayores. El subtipo celotípico se enfoca en la convicción infundada de infidelidad de la pareja."
+            },
+            {
+                "pregunta": "18. Tras sufrir una pérdida traumática inesperada, una mujer de 32 años presenta abruptamente delirios persecutorios, alucinaciones auditivas y agitación durante 12 días, recuperando de forma completa su nivel de funcionamiento previo tras la resolución del episodio. ¿Cuál es el diagnóstico según las fuentes?",
+                "opA": "Trastorno Esquizofreniforme.",
+                "opB": "Trastorno Psicótico Agudo / Breve (con desencadenante grave / psicosis reactiva breve).",
+                "opC": "Trastorno de Estrés Postraumático con amnesia disociativa.",
+                "opD": "Esquizofrenia de inicio tardío.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con PSIQUIATRÍA.pdf (sección 'Trastorno Psicótico Agudo'), se define por un inicio súbito de síntomas psicóticos con una duración de al menos 1 día pero menos de 1 mes, con un retorno completo al nivel de funcionamiento previo. Si ocurre tras un evento traumático, se clasifica 'con desencadenante grave'."
+            },
+            {
+                "pregunta": "19. La diferencia fundamental en el criterio temporal entre el Trastorno Esquizofreniforme y la Esquizofrenia radica en que en el Trastorno Esquizofreniforme los síntomas psicóticos duran:",
+                "opA": "Menos de 24 horas.",
+                "opB": "Al menos 1 mes pero menos de 6 meses.",
+                "opC": "Más de 1 año ininterrumpido.",
+                "opD": "Exactamente 2 semanas durante la fase lútea.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se especifica que el Trastorno Esquizofreniforme presenta una clínica idéntica a la esquizofrenia en cuanto a síntomas activos, pero su duración total se sitúa entre al menos 1 mes y menos de 6 meses. Si sobrepasa los 6 meses, se reclasifica como esquizofrenia."
+            },
+            {
+                "pregunta": "20. Para diagnosticar un Trastorno Esquizoafectivo y diferenciarlo de un Trastorno Depresivo o Bipolar con características psicóticas, ¿cuál es el criterio clínico indispensable respecto a los síntomas psicóticos?",
+                "opA": "Los síntomas psicóticos deben aparecer únicamente cuando el paciente está en eutimia prolongada de más de 2 años.",
+                "opB": "El paciente debe haber presentado delirios o alucinaciones durante al menos 2 semanas en ausencia de un episodio mayor del estado de ánimo.",
+                "opC": "Los síntomas psicóticos deben remitir inmediatamente al iniciar un estabilizador del ánimo.",
+                "opD": "La psicosis debe durar menos de 3 días en total.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf (sección 'Trastorno Esquizoafectivo') se remarca que el criterio diferencial clave exige que hayan existido alucinaciones o delirios durante al menos 2 semanas continuas en ausencia de un episodio mayor del estado de ánimo (depresivo o maníaco)."
+            },
+            {
+                "pregunta": "21. Un paciente ha presentado a lo largo de su vida tres episodios depresivos mayores y un episodio plenamente maníaco que requirió hospitalización psiquiátrica por hiperactividad extrema, disrupción conductual e ideas de grandiosidad. ¿Cuál es el diagnóstico preciso?",
+                "opA": "Trastorno Bipolar Tipo II.",
+                "opB": "Trastorno Bipolar Tipo I.",
+                "opC": "Trastorno Ciclotímico.",
+                "opD": "Trastorno Depresivo Mayor Recurrente.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se establece que el Trastorno Bipolar Tipo I se define por la presencia de al menos un episodio maníaco completo a lo largo de la vida (con o sin episodios depresivos o hipomaníacos). La presencia de manía excluye el Bipolar II."
+            },
+            {
+                "pregunta": "22. Respecto al Trastorno Bipolar Tipo II, ¿cuál de las siguientes aseveraciones sobre el episodio hipomaníaco es correcta según los criterios del DSM-5 descritos en la fuente?",
+                "opA": "Requiere la presencia indispensable de síntomas psicóticos para su confirmación.",
+                "opB": "Tiene una duración mínima de al menos 4 días consecutivos, es netamente diferente del funcionamiento habitual, pero no causa una alteración grave en el funcionamiento social/laboral ni requiere hospitalización.",
+                "opC": "Dura al menos 2 semanas ininterrumpidas y cursa con deterioro funcional severo.",
+                "opD": "Requiere la presencia de confusión mental y amnesia retrógrada.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según PSIQUIATRÍA.pdf (sección 'Episodio Hipomaníaco - Trastorno Bipolar II'), la hipomanía consiste en un período diferenciado con ánimo elevado/irritable de al menos 4 días de duración, con cambios observables sin llegar a generar incapacidad grave, sin requerir hospitalización y sin síntomas psicóticos."
+            },
+            {
+                "pregunta": "23. El Carbonato de Litio continúa siendo el fármaco de referencia ('gold standard') en el tratamiento de mantenimiento del Trastorno Bipolar. ¿Cuál es una de sus propiedades profilácticas diferenciales más destacadas citada en el texto?",
+                "opA": "Acción antipsicótica inmediata superior a la Clozapina.",
+                "opB": "Potente efecto reductor del riesgo de recaídas y demostrado efecto protector específico contra la ideación y conducta suicida.",
+                "opC": "Inducción rápida de apetito sin necesidad de controles sanguíneos.",
+                "opD": "Capacidad de administrarse a dosis fijas de por vida sin riesgo de toxicidad renal.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se destaca que el Litio es el estabilizador del ánimo con mayor evidencia en la prevención de recaídas (maníacas y depresivas) y posee una propiedad anti-suicida única en psiquiatría, requiriendo estrecho monitoreo de litiemia por su estrecho margen terapéutico."
+            },
+            {
+                "pregunta": "24. En el manejo de las distintas fases del Trastorno Bipolar, ¿cuál es la indicación de primera elección para el Ácido Valproico versus la Lamotrigina según la evidencia recopilada en las fuentes?",
+                "opA": "Valproato para prevención de depresión bipolar; Lamotrigina para manía aguda grave.",
+                "opB": "Valproato para episodios maníacos agudos, ciclos rápidos y estados mixtos; Lamotrigina para la prevención y tratamiento de la fase depresiva bipolar.",
+                "opC": "Ambos están contraindicados de forma absoluta en el trastorno bipolar.",
+                "opD": "Lamotrigina es de elección en manía psicótica aguda por su rápido efecto sedante.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En los esquemas farmacológicos de PSIQUIATRÍA.pdf se indica que el Ácido Valproico es especialmente eficaz en la manía aguda, ciclos rápidos y características mixtas; mientras que la Lamotrigina tiene su indicación principal en la prevención y manejo de la depresión bipolar."
+            },
+            {
+                "pregunta": "25. Un paciente de 35 años consulta por preocupación constante e incontrolable sobre múltiples aspectos de su vida (trabajo, salud familiar, finanzas) presente durante más de 8 meses, acompañada de tensión muscular, fatiga, irritabilidad y alteraciones del sueño. ¿Cuál es el diagnóstico más adecuado?",
+                "opA": "Trastorno de Pánico con Agorafobia.",
+                "opB": "Trastorno de Ansiedad Generalizada (TAG).",
+                "opC": "Trastorno Adaptativo con Ansiedad.",
+                "opD": "Trastorno de Somatización.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf define el TAG por la presencia de preocupación y tensión excesivas, difíciles de controlar, sobre múltiples eventos diarios durante al menos 6 meses, asociando síntomas somáticos como tensión muscular, fatiga e irritabilidad."
+            },
+            {
+                "pregunta": "26. En el tratamiento farmacológico inicial del Trastorno de Pánico (crisis de angustia recurrentes e imprevistas), ¿por qué se recomienda iniciar los ISRS (ej. Sertralina, Paroxetina) a una dosis significativamente menor (25%-50% de la dosis terapéutica estándar)?",
+                "opA": "Para evitar el riesgo inminente de agranulocitosis.",
+                "opB": "Porque los pacientes con trastorno de pánico presentan una hipersensibilidad inicial a los efectos secundarios estimulantes de los ISRS, lo que podría desencadenar o empeorar los ataques de pánico al inicio del tratamiento.",
+                "opC": "Porque a dosis normales los ISRS pierden por completo su biodisponibilidad oral.",
+                "opD": "Para prevenir la aparición inmediata de un síndrome neuroléptico maligno.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con la tabla de tratamiento de ansiedad en PSIQUIATRÍA.pdf, en el Trastorno de Pánico se requiere una titulación inicial más lenta (iniciar al 25%-50% de la dosis habitual) debido a la hipersensibilidad de estos pacientes a los efectos secundarios iniciales (activación/ansiedad de rebote) que pueden gatillar una crisis."
+            },
+            {
+                "pregunta": "27. Para diagnosticar Agorafobia según el DSM-5, el paciente debe experimentar miedo e hiperactivación marcada en al menos 2 de 5 situaciones específicas por temor a no poder escapar o no disponer de ayuda. ¿Cuáles son estas situaciones clásicas identificadas en el texto?",
+                "opA": "Hablar en público, comer solo, escribir frente a otros, usar computadoras y acudir al médico.",
+                "opB": "Uso de transporte público, estar en espacios abiertos, estar en lugares cerrados, hacer filas/estar en multitudes, y estar fuera de casa solo.",
+                "opC": "Alturas, tormentas, sangre, inyecciones y animales domésticos.",
+                "opD": "Ver espejos, escuchar ruidos fuertes, estar a oscuras, tocar objetos sucios y conducir de noche.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf enumera explícitamente las 5 situaciones agorafóbicas del DSM-5: 1) transporte público, 2) espacios abiertos, 3) sitios cerrados, 4) hacer filas o estar en multitudes, y 5) estar fuera de casa solo."
+            },
+            {
+                "pregunta": "28. Un músico profesional acude por ansiedad incapacitante exclusivamente cuando debe realizar presentaciones en público ante un auditorio, manifestada por taquicardia, temblor distal visible y sudoración profusa. ¿Cuál es el subtipo específico de este trastorno de ansiedad y la estrategia farmacológica puntual de elección?",
+                "opA": "Trastorno de Ansiedad Social 'Exclusivamente de Ejecución'; tratamiento puntual con Betabloqueantes (ej. Propranolol 10-40 mg) 30-60 minutos antes del evento.",
+                "opB": "Agorafobia grave; uso continuo de Clorpromazina endovenosa.",
+                "opC": "Trastorno de Pánico continuo; tratamiento con Antipsicóticos de larga acción (LAI).",
+                "opD": "Fobia Específica de tipo situacional; uso diario e indefinido de Diazepam 20 mg.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En PSIQUIATRÍA.pdf se especifica que para el subtipo 'Exclusivamente de Ejecución' del Trastorno de Ansiedad Social (hablar o actuar en público), el tratamiento de elección es la administración a demanda de Betabloqueantes (Propranolol 10–40 mg) entre 30 y 60 minutos antes de la actuación para bloquear la descarga simpática periférica."
+            },
+            {
+                "pregunta": "29. La Fobia Específica del subtipo Sangre-Inyecciones-Daño posee una respuesta fisiológica autonómica única que la distingue de las demás fobias. ¿En qué consiste esta respuesta?",
+                "opA": "Activación simpática sostenida que culmina en hipertensión maligna e hipertermia.",
+                "opB": "Respuesta bifásica vasovagal caracterizada por un breve pico simpático seguido de un marcado incremento vagal con bradicardia e hipotensión, predisponiendo al síncope.",
+                "opC": "Bloqueo neuromuscular completo inducido por hiperventilación alcalótica.",
+                "opD": "Aumento masivo de prolactina con catatonia transitoria.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El texto de PSIQUIATRÍA.pdf señala que el subtipo Sangre-Inyecciones-Daño se asocia con frecuencia a una respuesta neurovegetativa vasovagal bifásica con descenso brusco de la presión arterial y frecuencia cardíaca, produciendo desmayo o síncope vasovagal."
+            },
+            {
+                "pregunta": "30. En un paciente de 60 años con cirrosis hepática Child-Pugh B que cursa con un cuadro agudo de ansiedad o agitación psicomotora, ¿por qué el Lorazepam es la benzodiacepina de elección sobre el Diazepam o el Clonazepam?",
+                "opA": "Porque no se absorbe por vía oral y no llega a la circulación portal.",
+                "opB": "Porque el Lorazepam se metaboliza directamente mediante glucuronidación de fase II (sin requerir la oxidación hepática del citocromo P450 de fase I), previniendo la acumulación de metabolitos tóxicos.",
+                "opC": "Porque estimula la regeneración del parénquima hepático.",
+                "opD": "Porque actúa como un agonista dopaminérgico puro sin unirse al receptor GABA-A.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf remarca que el Lorazepam (junto con Oxazepam y Temazepam) es de elección en pacientes con compromiso o insuficiencia hepática porque su metabolismo no depende de la oxidación por fase I (CYP450), metabolizándose de forma segura mediante conjugación/glucuronidación en fase II."
+            },
+            {
+                "pregunta": "31. Un paciente senil de 72 años con antecedentes de cardiopatía isquémica requiere inicio de un ISRS. ¿Qué advertencia electrocardiográfica específica de seguridad exige reducir la dosis máxima de Citalopram a 20 mg/día (o 40 mg/día en adultos jóvenes)?",
+                "opA": "Elevación del segmento ST con riesgo de síndrome de Brugada.",
+                "opB": "Riesgo de prolongación dosis-dependiente del intervalo QTc en el electrocardiograma y arritmias ventriculares (Torsades de Pointes).",
+                "opC": "Bloqueo AV de tercer grado irreversible.",
+                "opD": "Síndrome de preexcitación Wolff-Parkinson-White.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En la sección de Psicofarmacología de PSIQUIATRÍA.pdf se destaca explícitamente que Citalopram (y Escitalopram) presenta una advertencia cardiaca por prolongación dosis-dependiente del intervalo QTc, limitando la FDA/EMA la dosis máxima a 20 mg/día en mayores de 60 años para prevenir Torsades de Pointes."
+            },
+            {
+                "pregunta": "32. Además de su acción principal como inhibidor de la recaptación de serotonina, ¿qué leve propiedad farmacológica adicional posee la Sertralina que le otorga un perfil ligeramente activador e impulsador de la energía?",
+                "opA": "Bloqueo de los receptores histaminérgicos H1 a dosis bajas.",
+                "opB": "Inhibición leve de la recaptación de dopamina (DAT) y modulación de receptores Sigma-1.",
+                "opC": "Agonismo directo del receptor opioide Mu.",
+                "opD": "Inhibición irreversible de la acetilcolinesterasa.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según la ficha farmacológica de Sertralina en PSIQUIATRÍA.pdf, además de bloquear el transportador de serotonina (SERT), posee una débil actividad en la recaptación de dopamina (DAT) y fijación en receptores Sigma-1, lo que contribuye a sus efectos sobre la motivación y concentración."
+            },
+            {
+                "pregunta": "33. ¿Por qué la Paroxetina es el ISRS que con mayor frecuencia produce un 'síndrome de discontinuación/abstinencia' severo (mareos, parestesias en 'descarga eléctrica', insomnio, irritabilidad) cuando se suspende abruptamente?",
+                "opA": "Debido a su vida media extremadamente larga de 10 a 14 días.",
+                "opB": "Debido a su vida media corta, la ausencia de metabolitos activos y sus notables propiedades anticolinérgicas adicionales.",
+                "opC": "Porque induce una depleción total de plaquetas en 24 horas.",
+                "opD": "Porque no se une a proteínas plasmáticas.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se advierte que la Paroxetina presenta un marcado síndrome de abstinencia al retirar el tratamiento por su corta vida media clínica y falta de metabolitos activos, requiriendo un desmonte progresivo y muy controlado."
+            },
+            {
+                "pregunta": "34. ¿Cuál es la característica farmacocinética diferencial de la Fluoxetina y su metabolito activo (Norfluoxetina) que le confiere 'autoprotección' contra el síndrome de discontinuación tras la omisión accidental de dosis?",
+                "opA": "Vida media plasmática muy prolongada (la norfluoxetina tiene una vida media de hasta 7-15 días).",
+                "opB": "Excreción renal inmediata en menos de 2 horas.",
+                "opC": "Biodisponibilidad oral del 100% que no depende del metabolismo hepático.",
+                "opD": "Incapacidad para atravesar la barrera hematoencefálica.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "En PSIQUIATRÍA.pdf se señala que la Fluoxetina y su metabolito activo norfluoxetina tienen la vida media más larga entre los ISRS (días a semanas), por lo que es la que menos requiere un desescalamiento riguroso y presenta menor riesgo de síntomas de retirada por dosis perdidas."
+            },
+            {
+                "pregunta": "35. La Venlafaxina es un inhibidor de la recaptación de serotonina y noradrenalina (ISRN dual). ¿A qué rango de dosis empieza a ejercer un efecto noradrenérgico clínicamente significativo y qué constante vital se debe monitorizar?",
+                "opA": "A dosis bajas (<37.5 mg/día); se monitoriza la saturación de oxígeno.",
+                "opB": "A dosis medias-altas (≥150–225 mg/día); se debe monitorizar periódicamente la Presión Arterial por riesgo de hipertensión arterial dosis-dependiente.",
+                "opC": "A cualquier dosis; se monitoriza la glucemia en ayunas.",
+                "opD": "Solo cuando se administra por vía intravenosa; monitorización de temperatura central.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf detalla que la Venlafaxina actua como un ISRS puro a dosis bajas (75 mg/día) e incorpora el bloqueo de recaptación de noradrenalina a dosis de 150-225 mg/día, pudiendo elevar la presión arterial diastólica por su tono noradrenérgico."
+            },
+            {
+                "pregunta": "36. Un paciente anciano de 78 años con depresión mayor grave presenta insomnio de conciliación pertinaz y pérdida ponderal masiva (caquexia). ¿Cuál de los siguientes antidepresivos es de elección por su mecanismo antagonista de receptores alfa-2 adrenérgicos presinápticos y receptores H1 de histamina?",
+                "opA": "Bupropión.",
+                "opB": "Mirtazapina.",
+                "opC": "Reboxetina.",
+                "opD": "Fluoxetina.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con PSIQUIATRÍA.pdf (sección 'Mirtazapina'), es un antidepresivo noradrenérgico y serotoninérgico específico (NaSSA) que bloquea los autorreceptores alfa-2 presinápticos y receptores 5-HT2/5-HT3 y H1, resultando altamente sedante a dosis bajas (15 mg) e induciendo ganancia de peso y estimulación del apetito."
+            },
+            {
+                "pregunta": "37. El Bupropión es un inhibidor de la recaptación de dopamina y noradrenalina (IRDN). ¿En cuál de las siguientes situaciones clínicas se encuentra estrictamente CONTRAINDICADO debido a la disminución del umbral convulsivo?",
+                "opA": "Pacientes que desean dejar de fumar tabaco.",
+                "opB": "Pacientes con antecedentes de crisis convulsivas / epilepsia o trastornos de la conducta alimentaria (Bulimia / Anorexia nerviosa).",
+                "opC": "Depresión con enlentecimiento psicomotor.",
+                "opD": "Disfunción sexual inducida por ISRS.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf enfatiza que el Bupropión disminuye el umbral epileptógeno. Por ello, está contraindicado en pacientes con epilepsia, antecedente de convulsiones, traumatismo craneoencefálico grave o historia de trastornos de la conducta alimentaria (anorexia/bulimia) por alto riesgo de convulsiones."
+            },
+            {
+                "pregunta": "38. Un paciente con antecedente de sobredosis por Amitriptilina es ingresado en urgencias inconsciente, con pupilas dilatadas, sequedad de mucosas, retención urinaria y un ECG que muestra ensanchamiento del complejo QRS (>120 ms). ¿Cuál es la causa neuroquímica y cardiaca principal de la letalidad en intoxicaciones por antidepresivos tricíclicos?",
+                "opA": "Inhibición de la anhidrasa carbónica renal.",
+                "opB": "Bloqueo de los canales de sodio dependientes de voltaje en el tejido de conducción cardíaco y antagonismo muscarínico/histaminérgico.",
+                "opC": "Fallo hepático fulminante mediado por citocromo P450.",
+                "opD": "Saturación irrestricta de receptores GABA-B.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se advierte que los Antidepresivos Tricíclicos (Amitriptilina, Imipramina, Clomipramina) tienen un estrecho margen de seguridad. La toxicidad aguda por sobredosis bloquea los canales de sodio rápidos del miocardio produciendo ensanchamiento del QRS, arritmias ventriculares letales e hipotensión, además de efectos anticolinérgicos graves."
+            },
+            {
+                "pregunta": "39. ¿Cuál es el antidepresivo tricíclico con la mayor potencia de inhibición de la recaptación de serotonina, considerado históricamente de alta eficacia en el Trastorno Obsesivo-Compulsivo (TOC) resistente?",
+                "opA": "Nortriptilina.",
+                "opB": "Clomipramina.",
+                "opC": "Desipramina.",
+                "opD": "Maprotilina.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf enumera a la Clomipramina como el tricíclico de elección con mayor acción serotoninérgica, ampliamente indicado en el TOC refractario cuando han fallado los ISRS a dosis máximas."
+            },
+            {
+                "pregunta": "40. Un paciente esquizofrénico que inició Haloperidol en dosis elevadas hace 4 días presenta rigidez muscular extrema en 'tubo de plomo', hipertermia de 39.8 °C, diaforesis, labilidad tensional, taquicardia y una Creatinquinasa (CK) sérica de 15,000 U/L. ¿Cuál es el diagnóstico de urgencia y el manejo inmediato prescrito?",
+                "opA": "Acatisia aguda; administrar Propranolol.",
+                "opB": "Síndrome Neuroléptico Maligno (SNM); suspender antipsicóticos inmediatamente, brindar soporte hidroelectrolítico en UCI y administrar agonistas dopaminérgicos (Bromocriptina) o Dantroleno.",
+                "opC": "Distonía aguda; aplicar Biperideno endovenoso.",
+                "opD": "Síndrome Serotoninérgico; administrar Ciproheptadina.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf identifica el SNM como una urgencia vital caracterizada por la tríada/tétrada de rigidez muscular en tubo de plomo, hipertermia, inestabilidad autonómica y alteración del sensorio con rabdomiólisis (CK elevada). Exige suspensión inmediata de antipsicóticos, UCI, medidas de enfriamiento y tratamiento con Dantroleno o Bromocriptina."
+            },
+            {
+                "pregunta": "41. Un paciente tratado con un antipsicótico de alta potencia acude a urgencias manifestando una sensación interna insoportable de inquietud motora que le obliga a permanecer en movimiento constante, marchando o cambiando de posición continuamente. ¿Cómo se denomina este síntoma extrapiramidal y cuál es su tratamiento farmacológico de primera línea?",
+                "opA": "Parkinsonismo farmacológico; tratar con Levodopa.",
+                "opB": "Acatisia aguda; tratar reduciendo la dosis del antipsicótico y administrando Betabloqueantes (Propranolol) o Benzodiacepinas.",
+                "opC": "Discinesia tardía; tratar con Olanzapina a dosis altas.",
+                "opD": "Catalepsia catatónica; tratar con electroshock inmediato.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf describe la acatisia como la vivencia subjetiva y objetiva de inquietud motora que impele al movimiento. Su manejo incluye la reducción del antipsicótico y el uso de Betabloqueantes lipofílicos como Propranolol o benzodiacepinas (Clonazepam)."
+            },
+            {
+                "pregunta": "42. A las pocas horas de recibir una dosis intramuscular de Haloperidol, un paciente joven presenta espasmo muscular involuntario y doloroso de los músculos del cuello (tortícolis) y desviación conjugada de la mirada hacia arriba (crisis oculógira). ¿Cuál es el tratamiento inmediato de elección?",
+                "opA": "Flumazenil intravenoso.",
+                "opB": "Anticolinérgico parenteral (Biperideno IM/IV) o Antihistamínico con acción anticolinérgica (Difenhidramina).",
+                "opC": "Carbamazepina oral.",
+                "opD": "Infusión de Citalopram.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La distonía aguda es una reacción extrapiramidal temprana (horas a días) por potente bloqueo D2 en la vía nigroestriada. El tratamiento de urgencia rápido y resolutivo es la administración de anticolinérgicos centrales como el Biperideno IV/IM o Difenhidramina."
+            },
+            {
+                "pregunta": "43. En la evaluación neuropsiquiátrica de urgencia de un adulto mayor que presenta desorientación y alucinaciones visuales, ¿cuál es el rasgo clínico distintivo que diferencia fundamentalmente al Delirium (Síndrome Confusional Agudo) de un Trastorno Neurocognitivo Mayor (Demencia)?",
+                "opA": "Afectación de la memoria a largo plazo.",
+                "opB": "Inicio agudo o subagudo (horas/días) con curso fluctuante a lo largo del día y alteración primaria de la atención y el nivel de conciencia.",
+                "opC": "Presencia de afasia fluida.",
+                "opD": "Conservación total del ciclo sueño-vigilia.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Según PSIQUIATRÍA.pdf (sección 'Neuropsiquiatría / Examen Mental'), el Delirium se distingue de la demencia por su carácter agudo, inicio rápido, curso fluctuante (con empeoramiento vespertino/nocturno) y alteración cardinal del nivel de atención y conciencia secundaria a causas médicas orgánicas subyacentes."
+            },
+            {
+                "pregunta": "44. En un paciente hospitalizado en fase aguda de Delirium agitado con alucinaciones que comprometen su seguridad, ¿cuál es el fármaco de elección para el control de la agitación sintomática a dosis bajas?",
+                "opA": "Benzodiacepinas de larga acción a dosis elevadas (Diazepam IV) de forma generalizada.",
+                "opB": "Antipsicóticos a dosis bajas (ej. Haloperidol oral/IM o Risperidona), evitando las benzodiacepinas excepto en delirium por abstinencia alcohólica o de sedantes.",
+                "opC": "Valproato de sodio IV continuo.",
+                "opD": "Estimulantes del SNC como el Metilfenidato.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf indica que el Haloperidol a dosis bajas es el agente de elección para el manejo sintomático del delirium agitado. Las benzodiacepinas se evitan porque pueden empeorar la confusión mental y el estado de alerta, salvo en el Delirium Tremens (abstinencia alcohólica)."
+            },
+            {
+                "pregunta": "45. En el Trastorno Obsesivo-Compulsivo (TOC), ¿cómo se definen las 'obsesiones' frente a las 'compulsiones' según la psicopatología revisada en las fuentes?",
+                "opA": "Las obsesiones son actos motores repetitivos; las compulsiones son alucinaciones auditivas.",
+                "opB": "Las obsesiones son pensamientos, impulsos o imágenes recurrentes, intrusivos y no deseados que causan ansiedad; las compulsiones son conductas o actos mentales repetitivos dirigidos a reducir dicha ansiedad o prevenir un mal de acuerdo con reglas rígidas.",
+                "opC": "Las obsesiones son creencias delirantes irrompibles; las compulsiones son tics fónicos.",
+                "opD": "Las obsesiones aparecen solo durante el sueño REM; las compulsiones ocurren al despertar.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf se define el TOC distinguiendo las obsesiones (componente cognitivo egodistónico e intrusivo que genera malestar) de las compulsiones (actos motores o mentales ejecutados para neutralizar la ansiedad provocada por la obsesión)."
+            },
+            {
+                "pregunta": "46. Los trastornos de la personalidad se organizan tradicionalmente en tres grupos o 'clusters' (A, B y C) según sus características dominantes. ¿Cuál de las siguientes agrupaciones es la correcta?",
+                "opA": "Cluster A: Histriónico, Narcisista; Cluster B: Paranoide; Cluster C: Esquizotípico.",
+                "opB": "Cluster A (Raros/Excéntricos): Paranoide, Esquizoide, Esquizotípico; Cluster B (Dramáticos/Emocionales/Eráticos): Antisocial, Límite, Histriónico, Narcisista; Cluster C (Ansiosos/Temerosos): Evitativo, Dependiente, Obsesivo-Compulsivo de la Personalidad.",
+                "opC": "Cluster A: Ansioso; Cluster B: Esquizoide; Cluster C: Límite.",
+                "opD": "Cluster A: Antisocial; Cluster B: Evitativo; Cluster C: Narcisista.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con las clasificaciones del DSM-5 resumidas en PSIQUIATRÍA.pdf, los 10 trastornos de personalidad se agrupan en Cluster A (excéntricos: paranoide, esquizoide, esquizotípico), Cluster B (dramáticos/impulsivos: antisocial, límite, histriónico, narcisista) y Cluster C (ansiosos: evitativo, dependiente, obsesivo-compulsivo)."
+            },
+            {
+                "pregunta": "47. ¿Cuál es el elemento psicopatológico diferencial clave entre el Trastorno de la Personalidad Esquizoide y el Trastorno de la Personalidad Esquizotípico?",
+                "opA": "El esquizoide presenta alucinaciones auditivas complejas; el esquizotípico no presenta sintomatología afectiva.",
+                "opB": "El esquizoide se caracteriza por distanciamiento social e frialdad/aplanamiento afectivo sin distorsiones cognitivas; mientras que el esquizotípico añade distorsiones cognitivas/perceptivas, pensamiento mágico, ideas de referencia y conducta excéntrica.",
+                "opC": "El esquizoide tiene miedo a la evaluación negativa; el esquizotípico busca activamente atención mediática.",
+                "opD": "El esquizoide es un cuadro psicótico agudo reversibles en 24 horas.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En PSIQUIATRÍA.pdf (sección 'Trastorno Esquizotípico y diagnóstico diferencial') se aclara que el esquizoide destaca por el desinterés social y aislamiento pasivo sin distorsiones, mientras que el esquizotípico exhibe rareza del pensamiento, creencias mágicas, experiencias perceptivas inusuales e ideación paranoide atenuada."
+            },
+            {
+                "pregunta": "48. El DSM-5 introdujo en su Sección III un 'Modelo Alternativo para los Trastornos de la Personalidad'. ¿En qué consiste fundamentalmente este enfoque híbrido dimensional-categorial?",
+                "opA": "En la abolición total de los diagnósticos y uso exclusivo de pruebas sanguíneas de serotonina.",
+                "opB": "En evaluar el nivel de funcionamiento de la personalidad (Criterio A: identidad, autodirección, empatía e intimidad) y los rasgos patológicos dominantes (Criterio B: afectividad negativa, desapego, antagonismo, desinhibición, psicoticismo).",
+                "opC": "En clasificar a los pacientes según su grupo sanguíneo y electroencefalograma.",
+                "opD": "En evaluar la respuesta exclusiva a fármacos tricíclicos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Como se explicita en la Sección I y III del DSM-5 (PSIQUIATRÍA.pdf, Pasaje 1), el modelo alternativo evalúa el deterioro en el funcionamiento de la personalidad (auto / interpersonal: identidad, autodirección, empatía, intimidad) combinado con 5 dominios de rasgos patológicos dimensionales."
+            },
+            {
+                "pregunta": "49. Un paciente de 40 años es derivado a psiquiatría por labilidad afectiva, depresión grave, insomnio, debilidad muscular proximal, estrías violáceas abdominales e hipertensión arterial. Los exámenes de laboratorio revelan hiperglucemia e hipercortisolismo. ¿Cuál es el diagnóstico orgánico subyacente que causa este cuadro secundario?",
+                "opA": "Enfermedad de Addison.",
+                "opB": "Síndrome de Cushing.",
+                "opC": "Hiperparatiroidismo primario.",
+                "opD": "Feocromocitoma.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "PSIQUIATRÍA.pdf señala en 'Depresión debida a otra afección médica' que las alteraciones del eje hipotálamo-hipófisis-adrenal, en particular el Síndrome de Cushing (hipercortisolismo), se acompañan con alta frecuencia de síntomas depresivos graves, labilidad emocional y psicosis en casos avanzados."
+            },
+            {
+                "pregunta": "50. Durante el examen del estado mental, la incapacidad de un paciente para fijar o mantener la atención sobre un estímulo durante la entrevista clínica, dispersándose ante cualquier estímulo irrelevante del entorno, se registra técnicamente como:",
+                "opA": "Aprosodia afectiva.",
+                "opB": "Hipoprosexia o dispersión atencional.",
+                "opC": "Eutimia sostenida.",
+                "opD": "Hiperprosexia selectiva fija.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "De acuerdo con el desglose del Examen Mental en PSIQUIATRÍA.pdf (Pasaje 3, 'Atención y Concentración'), la disminución de la capacidad atencional se clasifica como hipoprosexia o dispersión, mientras que la falta total es aprosexia y el aumento desproporcionado hiperprosexia."
+            }
+        ];
+        //-------------EDITAR: fin del arreglo de preguntas directas.
+
+
+        //-------------EDITAR: reemplaza este arreglo con los casos clínicos de la nueva materia.
+        const mockCasos = [
+            {
+                "explicacionCaso": "Paciente femenina de 45 años, previamente funcional, traída por familiares por presentar desde hace 6 semanas tristeza profunda, llanto inmotivado, anhedonia total, insomnio tardío con despertar a las 3:00 AM y anorexia con pérdida de 7 kg de peso. En las últimas 2 semanas se agregaron ideas delirantes de ruina y culpa insalvables ('estoy en la quiebra absoluta y la policía viene a detenerme por arruinar a mi familia'), acompañadas de alucinaciones auditivas complejas donde escucha una voz que le dice 'mátate, no vales nada'. Examen mental: desaliño, hipomimia, enlentecimiento psicomotor severo, afecto hipotímico no reactivo, pensamiento con contenido delirante congruente con el estado de ánimo, sin síntomas de primer orden de Schneider fuera del episodio afectivo.",
+                "preguntas": [
+                    {
+                        "pregunta": "1. De acuerdo con el DSM-5 y la evaluación del estado mental, ¿cuál es el diagnóstico nosológico de elección para este caso?",
+                        "opA": "Esquizofrenia paranoide de inicio tardío.",
+                        "opB": "Trastorno Depresivo Mayor, episodio único severo con características psicóticas congruentes con el estado de ánimo.",
+                        "opC": "Trastorno Esquizoafectivo de tipo depresivo.",
+                        "opD": "Trastorno Delirante de tipo persecutorio.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf y los criterios DSM-5, el diagnóstico es Trastorno Depresivo Mayor con características psicóticas congruentes con el estado de ánimo, dado que las ideas delirantes (ruina, culpa) y las alucinaciones auditivas ocurren exclusivamente durante el curso de un episodio depresivo mayor y su contenido es plenamente congruente con la afectividad depresiva grave."
+                    },
+                    {
+                        "pregunta": "2. ¿Cuál es el tratamiento farmacológico combinado de primera línea para este episodio psicótico afectivo grave o la alternativa de alta eficacia en presencia de riesgo suicida inminente?",
+                        "opA": "Monoterapia con Fluoxetina a dosis altas.",
+                        "opB": "Antidepresivo (ISRS o Venlafaxina) combinado con un Antipsicótico Atípico (ej. Olanzapina o Risperidona), o Terapia Electroconvulsiva (TEC) en caso de riesgo suicida inminente o rechazo alimentario.",
+                        "opC": "Monoterapia con Carbonato de Litio.",
+                        "opD": "Benzodiacepinas a dosis altas combinadas con Haloperidol oral.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según PSIQUIATRÍA.pdf, la depresión psicótica responde de forma subóptima a monoterapia antidepresiva. El tratamiento de elección es la combinación de un antidepresivo con un antipsicótico atípico. Asimismo, la TEC se considera de primera línea en emergencias por riesgo suicida agudo, catatonia o inhibición psicomotora con rechazo de ingesta."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Varón de 24 años es ingresado a la unidad de psiquiatría traído por la policía tras ser detenido por interrumir el tráfico en una avenida principal desnudo, afirmando ser 'el nuevo mesías enviado a salvar la economía mundial'. Los familiares reportan que desde hace 10 días no duerme más de 2 horas por noche, se muestra verborreico, con taquipsiquia, fuga de ideas, gasto desmedido de dinero (compró 3 vehículos de lujo sin fondos) e hipersexualidad. No hay antecedentes de consumo de sustancias en el examen toxicológico de orina. Examen mental: inquietud psicomotora marcada, taquilalia, afecto eufórico e expansivo, ideas delirantes megalomaniacas e insomnio global.",
+                "preguntas": [
+                    {
+                        "pregunta": "3. ¿Cuál es el diagnóstico nosológico de este cuadro agudo de acuerdo con los criterios estandarizados?",
+                        "opA": "Trastorno Bipolar Tipo I, episodio maníaco agudo con características psicóticas.",
+                        "opB": "Trastorno Bipolar Tipo II, episodio hipomaníaco.",
+                        "opC": "Trastorno Esquizoafectivo de tipo maníaco.",
+                        "opD": "Trastorno de Personalidad Narcisista en descompensación agónica.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "En PSIQUIATRÍA.pdf se define el Episodio Maníaco Agudo (Trastorno Bipolar I) por un periodo delimitado de ánimo anormalmente elevado, expansivo o irritable con aumento de actividad/energía que dura al menos 1 semana (o cualquier duración si requiere hospitalización), acompañado de fuga de ideas, disminución de necesidad de sueño, grandiosidad y conductas de alto riesgo."
+                    },
+                    {
+                        "pregunta": "4. En el manejo intrahospitalario agudo de este episodio maníaco grave con síntomas psicóticos e hiperactividad motora, ¿cuál es el esquema farmacológico de elección inicial?",
+                        "opA": "Lamotrigina en monoterapia con titulación lenta.",
+                        "opB": "Combinación de un Estabilizador del Ánimo (ej. Ácido Valproico o Litio) más un Antipsicótico Atípico (ej. Olanzapina, Risperidona o Aripiprazol) y una Benzodiacepina de vida media corta/intermedia para la agitación agudísima.",
+                        "opC": "Sertralina combinada con Clonazepam.",
+                        "opD": "Inhibidores de la Monoaminooxidasa (IMAO) en infusión continua.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Las guías clínicas revisadas en PSIQUIATRÍA.pdf establecen que la manía agudísima y psicótica requiere tratamiento combinado desde el inicio: un estabilizador del estado de ánimo (Valproato o Litio) junto con un antipsicótico atípico para el control rápido de la psicosis y la hiperactividad, asociando benzodiacepinas a corto plazo si hay agitación severa."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Mujer de 26 años con diagnóstico de Esquizofrenia desde hace 2 años en tratamiento con Risperidona 6 mg/día. Sus familiares refieren excelente control de las alucinaciones auditivas y delirios de persecución. Sin embargo, en los últimos 3 meses la paciente presenta amenorrea secundaria, galactorrea bilateral espontánea, aumento de peso de 6 kg y disminución marcada de la líbido. Examen físico: galactorrea a la presión mamaria bilateral. Analítica: Prolactina sérica de 115 ng/mL (V.N. < 25 ng/mL), β-hCG negativa, TSH y T4L normales. Resonancia magnética cerebral de silla turca: sin microadenoma hipofisario.",
+                "preguntas": [
+                    {
+                        "pregunta": "5. ¿Cuál es el mecanismo fisiopatológico por el cual la Risperidona causa esta alteración endocrina y en qué vía dopaminérgica actúa?",
+                        "opA": "Estimulación de receptores D2 en la vía mesolímbica.",
+                        "opB": "Antagonismo de receptores D2 en la vía tuberoinfundibular, lo que elimina la inhibición tónica que ejerce la dopamina sobre la liberación de prolactina en la adenohipófisis.",
+                        "opC": "Bloqueo de receptores 5-HT2A en la vía nigroestriada.",
+                        "opD": "Inhibición de la recaptación de noradrenalina en el hipotálamo ventromedial.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf explica que la dopamina actúa como el factor inhibidor de la prolactina (PIF) a través de los receptores D2 de las células lactotropas adenohipofisarias en la vía tuberoinfundibular. El bloqueo D2 por antipsicóticos (especialmente Risperidona) desinhibe la secreción de prolactina, provocando galactorrea y amenorrea."
+                    },
+                    {
+                        "pregunta": "6. ¿Cuál es la estrategia de manejo psicofarmacológico más adecuada para esta paciente manteniendo la estabilidad psicótica?",
+                        "opA": "Aumentar la dosis de Risperidona a 8 mg/día y añadir bromocriptina a dosis elevadas.",
+                        "opB": "Cambiar gradualmente a un antipsicótico con menor impacto sobre la prolactina o mecanismo agonista parcial D2 (ej. Aripiprazol, Quetiapina o Clozapina) o añadir dosis bajas de Aripiprazol como coadyuvante.",
+                        "opC": "Suspender inmediatamente todo antipsicótico y mantener a la paciente sin fármacos.",
+                        "opD": "Realizar radioterapia estereotáctica sobre la glándula hipófisis.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se recomienda que ante hiperprolactinemia sintomática por antipsicóticos se opte por rotar a un antipsicótico 'ahorrador de prolactina' (como Aripiprazol, Quetiapina o Olanzapina) o agregar Aripiprazol a dosis bajas (agonista parcial D2) para normalizar los niveles de prolactina manteniendo la eficacia antipsicótica."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Hombre de 38 años con antecedente de psicosis esquizofrénica ingresa a urgencias por deterioro del estado de conciencia e hipertermia de 40.1 °C. Tres días antes se le administró Haloperidol decanoato 150 mg IM junto con Haloperidol oral 15 mg/día por agitación. Al examen físico: estúpido, mutista, diaforesis profusa, labilidad de la presión arterial (170/100 a 90/60 mmHg), taquicardia de 130 lpm y rigidez muscular generalizada extrema en 'tubo de plomo' con reflejos miotáticos disminuidos. Pruebas de laboratorio: Creatinquinasa (CK) total de 22,000 U/L, leucocitosis de 18,500/mm³ y acidosis metabólica leve.",
+                "preguntas": [
+                    {
+                        "pregunta": "7. ¿Cuál es el diagnóstico de urgencia psiquiátrica-médica y el hallazgo de laboratorio distintivo que confirma la miotoxicitat masiva?",
+                        "opA": "Síndrome Serotoninérgico; elevación de 5-HIAA en orina.",
+                        "opB": "Síndrome Neuroléptico Maligno (SNM); elevación severa de Creatinquinasa (CK) asociada a rhabdomiólisis.",
+                        "opC": "Catatonia Periódica Fálica; hipocalcemia severa.",
+                        "opD": "Hipertermia Maligna por anastésicos fluorados; elevación de mioglobina purificada.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf, el Síndrome Neuroléptico Maligno es una reacción adversa letal por bloqueo dopaminérgico masivo, caracterizada por la tetrada: alteración del sensorio, inestabilidad autonómica, hipertermia y rigidez muscular en 'tubo de plomo' con marcada elevación de CK (>10,000 U/L) secundaria a rhabdomiólisis."
+                    },
+                    {
+                        "pregunta": "8. ¿Cuáles son las medidas terapéuticas inmediatas de soporte y farmacológicas indicadas en la Unidad de Cuidados Intensivos (UCI) para este paciente?",
+                        "opA": "Continuar Haloperidol a dosis reducidas y administrar Fisostigmina IV.",
+                        "opB": "Retiro inmediato del antipsicótico, enfriamiento físico activo, hidratación parenteral agresiva, y administración de Dantroleno (relajante muscular directo) o Bromocriptina / Amantadina (agonistas dopaminérgicos).",
+                        "opC": "Administrar Ciproheptadina oral y Flumazenil IV.",
+                        "opD": "Realizar diálisis peritoneal inmediata sin retirar el antipsicótico.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf (sección 'Urgencias Psicofarmacológicas') se detalla el protocolo del SNM: 1) Descontinuar inmediatamente todos los antipsicóticos, 2) Soporte hemodinámico e hidratación IV para prevenir falla renal aguda por mioglobinuria, 3) Tratamiento específico con Dantroleno sodico o agonistas dopaminérgicos como Bromocriptina/Amantadina."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 29 años con Trastorno Depresivo Mayor en tratamiento con Sertralina 100 mg/día. Por persistencia de síntomas ansiosos, un médico general le prescribió Tramadol 100 mg cada 8 horas por una lumbalgia aguda y la paciente además consumió por cuenta propia Hierba de San Juan (Hypericum perforatum). A las 12 horas del inicio de esta combinación, acude a emergencias con agitación psicomotora, confusión, diaforesis, diarrea, temblor fino en extremidades superiores e hiperreflexia marcada con clonus inducible y espontáneo en miembros inferiores. Muestra una temperatura de 38.6 °C y midriasis bilateral reactiva.",
+                "preguntas": [
+                    {
+                        "pregunta": "9. De acuerdo con los criterios clínicos de Hunter, ¿cuál es el diagnóstico más probable de esta complicación farmacológica?",
+                        "opA": "Síndrome Neuroléptico Maligno.",
+                        "opB": "Síndrome Serotoninérgico (Toxicidad por Serotonina).",
+                        "opC": "Crisis de Pánico con hiperventilación.",
+                        "opD": "Síndrome Anticolinérgico Agudo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf señala que el Síndrome Serotoninérgico se produce por hiperestimulación de receptores 5-HT (especialmente 5-HT1A y 5-HT2A) al combinar agentes serotoninérgicos (ISRS + Tramadol + Hierba de San Juan). Los Criterios de Hunter destacan la presencia de clonus (espontáneo, inducible u ocular), agitación, diaforesis, hiperreflexia e hipertermia."
+                    },
+                    {
+                        "pregunta": "10. ¿Cuál es el antagonista específico del receptor serotoninérgico de elección indicado en casos moderados a graves de Síndrome Serotoninérgico?",
+                        "opA": "Naloxona.",
+                        "opB": "Ciproheptadina.",
+                        "opC": "Biperideno.",
+                        "opD": "Flumazenil.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se especifica que además de la suspensión inmediata de los fármacos causales y el soporte de funciones vitales con benzodiacepinas para la agitación, el tratamiento farmacológico antidótico de elección en el síndrome serotoninérgico es la Ciproheptadina (antagonista 5-HT1A y 5-HT2A)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Hombre de 31 años acude a la consulta tras haber visitado la sala de urgencias cardiológicas en 4 ocasiones en el último mes. Refiere episodios súbitos e imprevistos de miedo intenso alcanzando su pico en menos de 8 minutos, acompañados de palpitaciones, sensación de ahogo, opresión torácica, mareo, parestesias en manos y temor imperioso a 'morirse o volverse loco'. Los estudios electrocardiográficos, troponinas y perfil tiroideo son rigurosamente normales. El paciente manifiesta que ahora evita salir solo a la calle, usar el metro o acudir a centros comerciales por miedo a presentar una nueva crisis y no recibir ayuda.",
+                "preguntas": [
+                    {
+                        "pregunta": "11. ¿Cuál es el diagnóstico psiquiátrico integral de este paciente de acuerdo con el DSM-5?",
+                        "opA": "Trastorno de Ansiedad Generalizada exclusivo.",
+                        "opB": "Trastorno de Pánico (Crisis de Angustia Recurrente) con Agorafobia comórbida.",
+                        "opC": "Trastorno de Ansiedad por Enfermedad (Hipocondría).",
+                        "opD": "Trastorno Fóbico Específico de tipo situacional.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Según PSIQUIATRÍA.pdf, el Trastorno de Pánico requiere ataques de pánico imprevistos y recurrentes seguidos de al menos 1 mes de preocupación persistente por nuevos ataques o cambios de conducta desadaptativos. La conducta de evitación de lugares concurridos o transporte por temor a no poder escapar o recibir auxilio confirma la Agorafobia comórbida."
+                    },
+                    {
+                        "pregunta": "12. ¿Cuál es la estrategia de inicio recomendada para el tratamiento farmacológico y psicoterapéutico a largo plazo?",
+                        "opA": "Monoterapia continua e indefinida con Alprazolam a dosis altas.",
+                        "opB": "Inicio de un ISRS (ej. Sertralina o Paroxetina) a dosis bajas con titulación progresiva, combinado con Terapia Cognitivo-Conductual (TCC) centrada en reestructuración cognitiva y exposición interoceptiva.",
+                        "opC": "Antipsicóticos de primera generación (Haloperidol) a dosis sedantes.",
+                        "opD": "Uso a demanda de propranolol exclusivamente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se establece que la primera línea de tratamiento para el Trastorno de Pánico con Agorafobia es la combinación de un ISRS (iniciado a dosis bajas para evitar la reactivación ansiosa) y la Terapia Cognitivo-Conductual (TCC), utilizando benzodiacepinas solo de forma coadyuvante al inicio durante pocas semanas."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Mujer de 27 años acude por incapacidad para cumplir con sus horarios laborales. Invierte entre 3 y 4 horas al día lavándose las manos con jabón desinfectante hasta provocarce dermatitis erosiva, y comprobando en bucle de 15 a 20 veces que la llave del gas y los cerrojos de la puerta estén cerrados. Refiere pensamientos intrusivos, recurrentes e indeseados de que sus manos están 'contaminadas con bacterias letales que infectarán a sus padres', lo que le genera una ansiedad insoportable que solo cede momentáneamente tras realizar el ritual de lavado y verificación. La paciente reconoce que sus temores son excesivos e irracionales (juicio de realidad conservado).",
+                "preguntas": [
+                    {
+                        "pregunta": "13. ¿Cuál es la denominación psicopatológica correcta para los pensamientos intrusivos de contaminación y para los actos de lavado/comprobación?",
+                        "opA": "Ideas delirantes primarias y ecopraxia.",
+                        "opB": "Obsesiones (cogniciones intrusivas egodistónicas que generan ansiedad) y Compulsiones (conductas neutralizadoras repetitivas).",
+                        "opC": "Alucinaciones cenestésicas y automatismos comiciales.",
+                        "opD": "Fobias específicas e impulsos irresistibles egosintónicos.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define las Obsesiones como ideas, impulsos o imágenes recurrentes e intrusivas que causan ansiedad o malestar significativo (egodistónicas), y las Compulsiones como comportamientos o actos mentales repetitivos que el sujeto se ve impulsado a realizar para reducir la ansiedad provocada por la obsesión."
+                    },
+                    {
+                        "pregunta": "14. ¿Cuál es el tratamiento farmacológico de primera línea a dosis elevadas y la modalidad de psicoterapia con mayor evidencia de eficacia para el TOC?",
+                        "opA": "ISRS a dosis altas (ej. Fluoxetina 60-80 mg/día o Sertralina 200 mg/día) manteniéndolo al menos 8-12 semanas para evaluar respuesta + Terapia de Exposición con Prevención de Respuesta (EPR).",
+                        "opB": "Benzodiacepinas de vida media larga a dosis bajas + Psicoanálisis clásico.",
+                        "opC": "Antipsicóticos atípicos en monoterapia + Terapia Sistémica Familiar.",
+                        "opD": "Estabilizadores del ánimo + Terapia Dialéctico Conductual.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf, el tratamiento farmacológico del TOC requiere ISRS a dosis superiores a las empleadas en depresión (ej. Sertralina 200 mg, Fluoxetina 60-80 mg, Paroxetina 40-60 mg) durante periodos prolongados (8-12 semanas para ver respuesta inicial). La psicoterapia con mayor evidencia es la Exposición con Prevención de Respuesta (EPR)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Varón de 34 años, excorporal de rescate, presenció hace 7 meses el colapso de un edificio con múltiples víctimas. Desde entonces presenta insomnio severo, pesadillas recurrentes donde revive el evento, e 'intrusiones en vigilia' (flashbacks) provocadas por ruidos fuertes como sirenas de ambulancia, durante los cuales siente que está nuevamente en la escena del desastre. Evita activamente conversar sobre el tema o transitar por la zona de los hechos. Muestra además hipervigilancia extrema, respuesta de sobresalto exagerada, anhedonia y distanciamiento afectivo de su cónyuge.",
+                "preguntas": [
+                    {
+                        "pregunta": "15. De acuerdo con el DSM-5, ¿cuál es el diagnóstico definitivo para este cuadro clínico?",
+                        "opA": "Trastorno de Estrés Agudo.",
+                        "opB": "Trastorno por Estrés Postraumático (TEPT).",
+                        "opC": "Trastorno Adaptativo con alteración mixta de emociones y conducta.",
+                        "opD": "Trastorno Depresivo Mayor con patrón reactivo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se establece que el TEPT requiere la exposición a un evento traumático grave seguido de la presencia por más de 1 mes de síntomatología dividida en 4 dominios: 1) Intrusión (flashbacks, pesadillas), 2) Evitación de estímulos asociados, 3) Alteraciones cognitivas/afectivas negativas, y 4) Hiperactivación/reactividad (hipervigilancia, sobresalto)."
+                    },
+                    {
+                        "pregunta": "16. En el manejo psicofarmacológico del TEPT, ¿cuáles son los fármacos aprobados de primera línea para los síntomas núcleo y qué agente alfa-1 adrenérgico se utiliza específicamente para reducir las pesadillas traumáticas?",
+                        "opA": "Tricíclicos; Clonidina.",
+                        "opB": "ISRS (Sertralina y Paroxetina); Prazosina.",
+                        "opC": "Antipsicóticos típicos; Propranolol.",
+                        "opD": "Benzodiacepinas de alta potencia; Zolpidem.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf indica que los ISRS (Sertralina y Paroxetina) son los únicos fármacos aprobados por FDA para el tratamiento de primera línea del TEPT. Además, el antagonista alfa-1 adrenérgico Prazosina cuenta con evidencia específica para la reducción de las pesadillas y alteraciones del sueño de origen traumático."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Mujer de 33 años acude en fase depresiva con astenia, tristeza, culpa e ideación suicida pasiva desde hace 3 semanas. Al revisar detalladamente su historial clínico afectivo, la paciente y su esposo reportan que hace 6 meses presentó un periodo de 5 días seguidos en el que dormía solo 3 horas sin cansarse, se mostraba sumamente loquaz, inició 4 proyectos de remodelación simultáneos en su casa, gastó dinero por encima de sus ingresos y trabajaba sin descanso de noche. Durante dicho periodo no presentó alucinaciones, ni delirios, ni requirió hospitalización, manteniendo su trabajo sin disrupción grave. No ha presentado episodios maníacos completos.",
+                "preguntas": [
+                    {
+                        "pregunta": "17. ¿Cuál es la clasificación nosológica correcta de esta paciente según los criterios del DSM-5?",
+                        "opA": "Trastorno Depresivo Mayor Recurrente.",
+                        "opB": "Trastorno Bipolar Tipo II (Episodio depresivo actual, con antecedente de episodio hipomaníaco).",
+                        "opC": "Trastorno Bipolar Tipo I.",
+                        "opD": "Trastorno Ciclotímico.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf distingue el Trastorno Bipolar Tipo II por la presencia de al menos un episodio depresivo mayor y al menos un episodio hipomaníaco (duración mínima 4 días, sin disrupción social/laboral grave, sin hospitalización y sin psicosis). Nunca ha existido un episodio maníaco completo."
+                    },
+                    {
+                        "pregunta": "18. ¿Cuál es el tratamiento psicofarmacológico indicado para el manejo de la depresión bipolar en esta paciente evitando el viraje (viraje/switch) a manía o hipomanía?",
+                        "opA": "Monoterapia con Paroxetina o Venlafaxina a dosis elevadas.",
+                        "opB": "Estabilizadores del ánimo como Lamotrigina, Quetiapina, Lurasidona o la combinación Olanzapina/Fluoxetina.",
+                        "opC": "Haloperidol en monoterapia depot.",
+                        "opD": "Uso exclusivo de Alprazolam.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se enfatiza que la monoterapia con antidepresivos convencionales (ISRS, duales) en la depresión bipolar está desaconsejada por el riesgo de inducir viraje a manía/hipomanía o ciclado rápido. El tratamiento de elección incluye Lamotrigina, Quetiapina, Lurasidona o la combinación Olanzapina/Fluoxetina."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Varón de 52 años con Trastorno Bipolar I en manejo con Carbonato de Litio (900 mg/día) desde hace 4 años con adecuada estabilidad. Presentó un cuadro de gastroenteritis aguda con vómitos y diarrea copiosa de 3 días de evolución, sumado al consumo autoprescrito de Ibuprofeno (400 mg cada 8 horas) para la cefalea. Acude a urgencias somnoliento, con disartria, ataxia marcada, temblor grueso de manos, fasciculaciones musculares e hiperreflexia. Presión arterial: 100/60 mmHg, signos de deshidratación moderada. Litiemia en sangre: 2.3 mEq/L (Rango terapéutico: 0.6 – 1.2 mEq/L).",
+                "preguntas": [
+                    {
+                        "pregunta": "19. ¿Cuáles fueron los factores precipitantes principales que desencadenaron la intoxicación aguda por litio en este paciente?",
+                        "opA": "Ingesta masiva de potasio e hiperhidratación.",
+                        "opB": "Deshidratación/depleción de sodio secundaria a gastroenteritis junto con la coadministración de un AINE (Ibuprofeno), que reduce el aclaramiento renal de litio.",
+                        "opC": "Interacción con alimentos ricos en tiramina.",
+                        "opD": "Inducción enzimática del citocromo P450 por el ibuprofeno.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf detalla que el litio se reabsorbe en el túbulo contorneado proximal en competencia con el sodio. La deshidratación, la restricción de sodio y los fármacos que disminuyen la filtración glomerular o el flujo renal (como AINEs, IECA y diuréticos tiazídicos) incrementan significativamente los niveles de litiemia produciendo toxicidad."
+                    },
+                    {
+                        "pregunta": "20. Ante un nivel de litiemia de 2.3 mEq/L con sintomatología neurológica moderada-severa, ¿cuál es el manejo médico inicial prioritario y en qué nivel de litiemia (o gravedad) está indicada formalmente la Hemodiálisis?",
+                        "opA": "Suspensión del litio, expansión de volumen con solución salina isotónica (NaCl 0.9%) y diuresis forzada; Hemodiálisis si litiemia > 2.5 - 3.0 mEq/L (o > 4.0 mEq/L en intoxicación aguda) o ante deterioro neurológico grave/falla renal.",
+                        "opB": "Administración de Flumazenil IV y carbón activado repetido.",
+                        "opC": "Forzar diuresis con Espironolactona y continuar el litio.",
+                        "opD": "Administrar Ciproheptadina y bicarbonato de sodio hemoderivado.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "En PSIQUIATRÍA.pdf se establece el manejo de la intoxicación por litio: rehidratación vigorosa con suero fisiológico para favorecer la excreción renal de litio. La hemodiálisis es el tratamiento de elección definitivo cuando la litiemia supera los 2.5-3.0 mEq/L en usuarios crónicos (o >4 mEq/L en agudos), o ante convulsiones, coma o insuficiencia renal."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenino de 81 años con antecedente de hipertensión y deterioro cognitivo leve ingresada a traumatología por fractura de cadera operada hace 48 horas. Durante la noche, la paciente se muestra desorientada en tiempo y espacio, agitada, intentando arrancarse las vías venosas y la sonda vesical, afirmando ver 'animales e insectos caminando por las paredes de la habitación' (alucinaciones visuales). Durante la mañana posterior se encuentra somnolienta e hipoactiva, para luego desorientarse nuevamente al atardecer. Parámetros biológicos: Leucocitosis 14,200/mm³, EGO con abundantes bacterias y nitritos positivos.",
+                "preguntas": [
+                    {
+                        "pregunta": "21. ¿Cuál es el diagnóstico sindromático psiquiátrico de urgencia y la causa orgánica subyacente precipitante?",
+                        "opA": "Demencia tipo Alzheimer en fase terminal; fractura quirúrgica.",
+                        "opB": "Delirium (Síndrome Confusional Agudo) hiperactivo/mixto; desencadenado por Infección del Trato Urinario (ITU) y estrés quirúrgico.",
+                        "opC": "Esquizofrenia paranoide de inicio tardío; trauma físico.",
+                        "opD": "Trastorno de Ansiedad por Hospitalización; anestesia epidural.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define el Delirium por su inicio agudo (horas/días), curso fluctuante con empeoramiento nocturno, alteración de la atención y el nivel de conciencia, secundario a una condición médica subyacente (en este caso ITU sepsis incipiente y postquirúrgico en anciano vulnerable)."
+                    },
+                    {
+                        "pregunta": "22. En el manejo sintomático de la agitación psicomotora y alucinaciones en este paciente con Delirium, ¿cuál es el fármaco antipsicótico de elección a dosis bajas y qué grupo farmacológico debe evitarse por empeorar la confusión?",
+                        "opA": "Diazepam IV a dosis altas; evitar antipsicóticos.",
+                        "opB": "Haloperidol a dosis bajas (0.5 – 2 mg/día oral o IM); evitar Benzodiacepinas (excepto en Delirium por abstinencia alcohólica/sedantes) ya que producen reacción paradojal y empeoran la cognición.",
+                        "opC": "Clozapina oral; evitar la difenhidramina.",
+                        "opD": "Valproato de sodio IV; evitar la risperidona.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf, el Haloperidol a dosis bajas es el estándar de oro sintomático para el delirium agitado. Las benzodiacepinas están contraindicadas como regla general porque aumentan la confusión, la sedación y el riesgo de caídas, reservándose únicamente para el delirium por abstinencia de alcohol o benzodiacepinas (Delirium Tremens)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Hombre de 46 años con historia de consumo pesado e inadecuado de alcohol (350 g/día) durante 15 años. Es ingresado a cirugía por apendicitis aguda. A las 68 horas de su ingreso (sin haber consumido alcohol), presenta diaforesis profusa, temblor fino a grueso en manos, taquicardia de 125 lpm, hipertensión arterial (165/105 mmHg), fiebre de 38.3 °C, midriasis, agitación psicomotora severa y terror por alucinaciones visuales micropsias ('ve bichos y serpientes pequeñas en su cama'). Muestra desorientación auto y alopsíquica completa.",
+                "preguntas": [
+                    {
+                        "pregunta": "23. ¿Cuál es el diagnóstico clínico correspondiente a esta fase grave de la abstinencia alcohólica?",
+                        "opA": "Alucinosis Alcohólica Simple.",
+                        "opB": "Delirium Tremens (Síndrome de Abstinencia Alcohólica Complicado con Delirium).",
+                        "opC": "Encefalopatía de Wernicke aislada.",
+                        "opD": "Síndrome de Korsakoff agudo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define el Delirium Tremens como la manifestación más grave de la abstinencia alcohólica (iniciada 48-72 horas tras el cese del consumo), caracterizada por delirium (confusión, alucinaciones zoópsicas/micropsias), inestabilidad autonómica severa (fiebre, taquicardia, hipertensión, diaforesis) y agitación."
+                    },
+                    {
+                        "pregunta": "24. ¿Cuál es el esquema farmacológico de elección para el control de la abstinencia/delirium tremens y qué vitamina debe administrarse ANTES de cualquier infusión de glucosa para prevenir la Encefalopatía de Wernicke?",
+                        "opA": "Haloperidol IV exclusivo; Vitamina B12 (Cobalamina).",
+                        "opB": "Benzodiacepinas de vida media larga a dosis pautadas y de titulación (ej. Diazepam o Clordiazepóxido); Vitamina B1 (Tiamina) parenteral previa a la glucosa.",
+                        "opC": "Valproato de sodio; Vitamina C a dosis masivas.",
+                        "opD": "Propranolol parenteral; Ácido Fólico parenteral.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se especifica que el pilar farmacológico del Delirium Tremens son las Benzodiacepinas (Diazepam/Clordiazepóxido) por tolerancia cruzada con el alcohol sobre el receptor GABA-A. Además, es obligatorio administrar Tiamina (Vitamina B1) IM/IV antes de infusiones glucosadas para evitar precipitar un cuadro de Encefalopatía de Wernicke."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Mujer de 22 años es llevada a urgencias por presentar cortes superficiales múltiples en antebrazos (autolesiones no suicidas) tras discutir con su pareja, quien le anunció que se iría de viaje de negocios por 3 días. La paciente refiere antecedente de múltiples relaciones interpersonales intensas e inestables que alternan entre la idealización extrema y la devaluación. Expresa sentimientos crónicos de vacío, miedo desesperado al abandono real o imaginado, labilidad afectiva con cambios bruscos de humor de horas de duración, conducta impulsiva (atracones de comida, gastos excesivos) e ideación paranoide transitoria vinculada al estrés.",
+                "preguntas": [
+                    {
+                        "pregunta": "25. ¿A qué trastorno de la personalidad pertene este patrón del Cluster B según la clasificación nosológica del DSM-5?",
+                        "opA": "Trastorno de la Personalidad Histriónica.",
+                        "opB": "Trastorno de la Personalidad Límite (Borderline).",
+                        "opC": "Trastorno de la Personalidad Esquizotípica.",
+                        "opD": "Trastorno de la Personalidad Antisocial.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define el Trastorno de la Personalidad Límite (Cluster B) por un patrón dominante de inestabilidad en las relaciones interpersonales, la autoimagen y los afectos, e impulsividad intensa, caracterizado por esfuerzos desesperados para evitar el abandono, autolesiones recurrentes y vacío crónico."
+                    },
+                    {
+                        "pregunta": "26. ¿Cuál es el enfoque psicoterapéutico estructurado con mayor nivel de evidencia científica para el tratamiento a largo plazo de este trastorno?",
+                        "opA": "Psicoanálisis ortogonal no directivo.",
+                        "opB": "Terapia Dialéctico-Conductual (TDC / DBT).",
+                        "opC": "Terapia Breve Enfocada en Soluciones.",
+                        "opD": "Terapia de Aceptación y Compromiso exclusiva sin módulos de habilidades.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf, la Terapia Dialéctico-Conductual (desarrollada por M. Linehan) es el tratamiento psicoterapéutico de elección con mayor evidencia demostrada para reducir conductas autolesivas, desregulación emocional e ingresos hospitalarios en el Trastorno de Personalidad Límite."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 36 años consulta por fatiga crónica y ánimo deprimido de 1 año de evolución. Refiere que su estado de ánimo es altamente reactivo: 'cuando me dan una buena noticia me alegro y me siento bien momentáneamente'. Sin embargo, duerme entre 11 y 13 horas diarias (hipersomnia), ha ganado 9 kg de peso por antojos incontrolables de carbohidratos/dulces, y siente una sensación de pesadez extrema en brazos y piernas que describe como si 'tuviera plomo en las extremidades'. Presenta además sensibilidad extrema al rechazo interpersonal que afecta sus relaciones laborales.",
+                "preguntas": [
+                    {
+                        "pregunta": "27. ¿Cuál es la especificación del subtipo de episodio depresivo mayor que presenta esta paciente?",
+                        "opA": "Trastorno Depresivo con Características Melancólicas.",
+                        "opB": "Trastorno Depresivo con Características Atípicas.",
+                        "opC": "Trastorno Depresivo con Catatonia.",
+                        "opD": "Trastorno Ansioso-Depresivo Múltiple.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se define el Subtipo Atípico de la Depresión por la presencia de reactividad del estado de ánimo (capacidad de alegrarse ante eventos positivos) combinada con dos o más de los siguientes elementos: aumento de peso/apetito, hipersomnia, parálisis plúmbea (pesadez de miembros) y patrón de sensibilidad al rechazo interpersonal."
+                    },
+                    {
+                        "pregunta": "28. Históricamente y en la psicofarmacología clásica, ¿qué grupo de antidepresivos demostró una respuesta superior en la depresión atípica, aunque actualmente los ISRS son de primera línea por su perfil de seguridad?",
+                        "opA": "Antidepresivos Tricíclicos (Amitriptilina).",
+                        "opB": "Inhibidores de la Monoaminooxidasa (IMAOs, ej. Fenelzina, Moclobemida).",
+                        "opC": "Antipsicóticos de 1ª generación.",
+                        "opD": "Benzodiacepinas de acción ultracorta.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf resalta que los estudios clásicos demostraron una eficacia superior de los IMAO (Inhibidores de la MAO) sobre los tricíclicos en la depresión atípica. Sin embargo, en la práctica moderna se emplean los ISRS como primera elección por la ausencia de restricciones dietéticas (tiramina) y su mayor seguridad."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Hombre de 44 años es remitido por su empresa a recursos humanos por graves conflictos con su equipo de trabajo. El paciente se describe como un 'perfeccionista absoluto', obsesionado con el orden, las reglas, las listas y los horarios, al punto de perder la finalidad principal de la actividad. Invierte hasta 14 horas al día trabajando, es incapaz de delegar tareas a menos que los demás se sometan exactamente a sus estándares, es extremadamente tacaño con el dinero acumulándolo para catástrofes futuras, e incapaz de deshacerse de objetos gastados e inútiles sin valor sentimental. Niega tener un problema y considera que 'sus reglas son la única forma correcta de hacer las cosas' (egosintonía).",
+                "preguntas": [
+                    {
+                        "pregunta": "29. ¿Cuál es el diagnóstico diferencial principal de este trastorno del Cluster C respecto al Trastorno Obsesivo-Compulsivo (TOC Axis I)?",
+                        "opA": "Trastorno de la Personalidad Obsesivo-Compulsiva (TOCP); caracterizado por un patrón generalizado de perfeccionismo e inflexibilidad egosintónica (el paciente no percibe sus rasgos como irracionales).",
+                        "opB": "Trastorno Obsesivo-Compulsivo (TOC); manifestado por obsesiones egodistónicas y compulsiones ritualizadas.",
+                        "opC": "Trastorno de Personalidad Esquizoide.",
+                        "opD": "Trastorno del Espectro Autista de inicio tardío.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "PSIQUIATRÍA.pdf diferencia el TOCP (Trastorno de la Personalidad) del TOC. El TOCP es un patrón permanente de perfeccionismo, rígidez y necesidad de control que es Egosintónico (el individuo lo considera deseable y correcto), mientras que el TOC cursa con obsesiones y compulsiones Egodistónicas (causan malestar y el paciente reconoce su irracionalidad)."
+                    },
+                    {
+                        "pregunta": "30. En la evaluación de la dinámica relacional del TOCP, ¿cuáles son los rasgos cardinales según los criterios DSM-5 señalados en las fuentes?",
+                        "opA": "Labilidad afectiva, impulsividad y autolesiones.",
+                        "opB": "Preocupación por los detalles/reglas, perfeccionismo que interfiere con la finalización de tareas, devoción excesiva al trabajo, inflexibilidad moral y dificultad para delegar.",
+                        "opC": "Ideas delirantes de persecución e hipersomnia.",
+                        "opD": "Comportamiento teatral, seducción inapropiada y búsqueda de atención.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se detallan los criterios del TOCP (Cluster C): preocupación desmedida por detalles, listas y orden; perfeccionismo paralizante; devoción laboral excluyendo el ocio; terquedad, escrupulosidad e incapacidad de tirar objetos o delegar."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Varón de 28 años con antecedente de esquizofrenia de 5 años de evolución es ingresado en estado de inmovilidad motora casi absoluta. Permanece mudo (mutismo), inmóvil en la cama sin reaccionar a estímulos dolorosos leves (estupor catatónico). Al mover pasivamente sus miembros superiores, estos permanecen fijados en la posición en la que el examinador los coloca, manteniendo posturas incómodas durante horas (flexibilidad cérea y catalepsia). Presenta además negativismo extremo (resistencia a cumplir órdenes o a ser movido) y obedecimiento automático alternante.",
+                "preguntas": [
+                    {
+                        "pregunta": "31. ¿Cómo se denomina el síndrome psicomotor que presenta este paciente y cuál es el signo característico de 'flexibilidad cérea'?",
+                        "opA": "Síndrome Parkinsoniano Agudo; rigidez en rueda dentada.",
+                        "opB": "Catatonia (asociada a esquizofrenia o trastorno afectivo); resistencia plástica sostenida al movimiento pasivo permitiendo moldear las extremidades en posturas fijas.",
+                        "opC": "Crisis de conversión disociativa; parálisis flácida.",
+                        "opD": "Síndrome de Enclaustramiento (Locked-in); parálisis voluntaria consciente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf describe la Catatonia como un síndrome psicomotor caracterizado por estupor, mutismo, negativismo, catalepsia y Flexibilidad Cérea (resistencia leve y plástica a la posición impuesta que permite adoptar posturas inmóviles prolongadas)."
+                    },
+                    {
+                        "pregunta": "32. ¿Cuál es el fármaco de primera línea para la prueba diagnóstica-terapéutica inmediata en la catatonia agudísima y cuál es la terapia definitiva si no hay respuesta?",
+                        "opA": "Haloperidol IV a dosis altas; Clozapina.",
+                        "opB": "Benzodiacepinas a dosis altas parenteral (Test de Lorazepam IV); Terapia Electroconvulsiva (TEC) si hay refractariedad o compromiso vital.",
+                        "opC": "Valproato de sodio; Risperidona LAI.",
+                        "opD": "Metilfenidato; Estimulación Magnética Transcraneal.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "De acuerdo con PSIQUIATRÍA.pdf, el pilar inicial del manejo de la catatonia es la administración de Lorazepam IV (Test de Lorazepam), que suele revertir la sintomatología catatónica en minutos/horas. Si la respuesta es insuficiente o hay riesgo vital por deshidratación/rhabdomiólisis, la Terapia Electroconvulsiva (TEC) es el tratamiento de elección definitivo."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Mujer de 39 años consulta acompañada de una carpeta con más de 20 estudios de laboratorio, tomografías y endoscopias de los últimos 3 años, todas con resultados normales. La paciente refiere dolor abdominal difuso persistente, palpitaciones, astenia, mareos intermitentes y parestesias. Manifiesta una preocupación excesiva y desproporcionada por la gravedad de sus síntomas, invirtiendo la mayor parte de su tiempo diario y energía en buscar médicos, solicitar pruebas y consultar en internet, convencida de que padece una enfermedad sistémica no diagnosticada que arruinará su vida.",
+                "preguntas": [
+                    {
+                        "pregunta": "33. ¿Cuál es el diagnóstico formal según el DSM-5 para esta presentación sintomática somática y afectiva?",
+                        "opA": "Trastorno de Ansiedad por Enfermedad (Hipocondría clásica sin síntomas somáticos).",
+                        "opB": "Trastorno de Síntomas Somáticos.",
+                        "opC": "Trastorno de Conversión (Trastorno de Síntomas Neurológicos Funcionales).",
+                        "opD": "Trastorno Facticio aplicado a uno mismo.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define el Trastorno de Síntomas Somáticos (DSM-5) por la presencia de uno o más síntomas somáticos angustiantes acompañados de pensamientos, sentimientos o comportamientos excesivos relacionados con dichos síntomas (pensamientos desproporcionados sobre la gravedad, alta ansiedad e inversión de tiempo excesivo)."
+                    },
+                    {
+                        "pregunta": "34. ¿Cuál es la conducta médica recomendada para el abordaje de este paciente en la consulta ambulatoria para evitar la yatrogenia?",
+                        "opA": "Solicitar de inmediato una nueva batería de biopsias e inmunofenotipo para descartar patología autoinmune raras.",
+                        "opB": "Establecer citas programadas periódicas fijas con un único médico de cabecera, validar el malestar de la paciente, evitar pruebas diagnósticas innecesarias y derivar a Terapia Cognitivo-Conductual.",
+                        "opC": "Confrontar agresivamente a la paciente indicándole que sus síntomas 'son totalmente inventados e imaginarios'.",
+                        "opD": "Prescribir opiáceos de acción prolongada para el alivio del dolor.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se enfatiza que en el Trastorno de Síntomas Somáticos la relación médico-paciente debe estructurarse con consultas periódicas agendadas (no guiadas por la crisis), empatía y validación del dolor real expresado, minimizando iatrogenia por estudios invasivos o poli-farmacia no justificada."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Estudiante universitario de 20 años acude por aislamiento progresivo. Refiere que desde la adolescencia experimenta un temor intenso y persistente en situaciones en las que puede ser examinado o juzgado por otros, como hablar en clase, comer en la cafetería universitaria o acudir a reuniones sociales. Teme actuar de una manera que resulte humillante o muestre signos de ansiedad (sonrojarse, temblar, traba de la voz). Debido a esto ha reprobado materias por no realizar exposiciones orales. Admite que su miedo es desproporcionado respecto a la amenaza real.",
+                "preguntas": [
+                    {
+                        "pregunta": "35. ¿Cuál es el diagnóstico nosológico de elección para este caso?",
+                        "opA": "Agorafobia.",
+                        "opB": "Trastorno de Ansiedad Social (Fobia Social), tipo generalizado.",
+                        "opC": "Trastorno de Personalidad Esquizoide.",
+                        "opD": "Trastorno de Pánico sin agorafobia.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf define el Trastorno de Ansiedad Social por un miedo o ansiedad intensos en situaciones sociales en las que la persona se expone al posible examen por parte de otras personas, temiendo la evaluación negativa (humillación, rechazo), lo que conduce a la evitación e interferencia funcional severa."
+                    },
+                    {
+                        "pregunta": "36. ¿Cuál es el tratamiento psicofarmacológico de elección para el Trastorno de Ansiedad Social generalizado y continuado?",
+                        "opA": "Inhibidores Selectivos de la Recaptación de Serotonina (ISRS, ej. Sertralina, Paroxetina o Escitalopram) o ISRN (Venlafaxina) de forma continuada.",
+                        "opB": "Uso de Benzodiacepinas sublinguales antes de cada evento social exclusivamente.",
+                        "opC": "Antipsicóticos atípicos de depósito.",
+                        "opD": "Monoterapia con Carbonato de Litio.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "En PSIQUIATRÍA.pdf se especifica que para el Trastorno de Ansiedad Social generalizado el tratamiento farmacológico de primera línea a largo plazo son los ISRS (Sertralina, Paroxetina, Escitalopram) o ISRN (Venlafaxina), manteniéndolos de forma continua, a diferencia del subtipo exclusivo de ejecución donde se usan betabloqueantes a demanda."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Adolescente femenina de 16 años es llevada a la consulta de hebiatría y psiquiatría por sus padres tras una pérdida ponderal masiva de 16 kg en los últimos 5 meses. Peso actual: 38 kg, Talla: 1.62 m, IMC: 14.4 kg/m² (Delgadez severa). Presenta amenorrea secundaria de 4 meses de evolución, lanugo en espalda y cara, piel seca, bradicardia sinusal de 42 lpm e hipotensión (85/50 mmHg). Muestra una restricción alimentaria extrema contando calorías de forma obsesiva, miedo intenso e incontrolable a engordar y alteración grave en la percepción de la propia imagen corporal (se percibe 'gorda' en el espejo a pesar del grado de emaciación).",
+                "preguntas": [
+                    {
+                        "pregunta": "37. De acuerdo con los criterios del DSM-5, ¿cuál es el diagnóstico preciso y el nivel de gravedad según el IMC?",
+                        "opA": "Bulimia Nerviosa de gravedad moderada.",
+                        "opB": "Anorexia Nerviosa, subtipo restrictivo, de gravedad extrema (IMC < 15 kg/m²).",
+                        "opC": "Trastorno por Evitación/Restricción de la Ingesta de Alimentos (ARFID).",
+                        "opD": "Trastorno Depresivo Mayor con caquexia secundaria.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf establece los criterios para Anorexia Nerviosa: 1) Restricción de la ingesta que conduce a un peso corporal significativamente bajo, 2) Miedo intenso a ganar peso, 3) Alteración en la percepción del propio peso/corporeidad. Con un IMC de 14.4 kg/m² se clasifica de gravedad extrema según las pautas del DSM-5."
+                    },
+                    {
+                        "pregunta": "38. Durante el proceso de renutrición hospitalaria en un paciente con Anorexia Nerviosa severa, ¿cuál es la complicación metabólica e hidroelectrolítica potencialmente letal que exige monitoreo estricto de FÓSFORO, potasio y magnesio séricos?",
+                        "opA": "Cetoacidosis Diabética grave.",
+                        "opB": "Síndrome de Realimentación (Refeeding Syndrome); caracterizado por hipofosfatemia severa aguda secundario al pico de insulina con falla cardíaca y neuromuscular.",
+                        "opC": "Síndrome de Lisis Tumoral agudo.",
+                        "opD": "Diabetes Insípida Central.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En PSIQUIATRÍA.pdf se advierte que el Síndrome de Realimentación ocurre al reintroducir carbohidratos en pacientes con desnutrición severa. La liberación masiva de insulina desplaza el fósforo, potasio y magnesio al intracelular, provocando hipofosfatemia aguda severa, arritmias cardíacas, paro cardiorrespiratorio y muerte si no se suplementa precozmente."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Hombre de 58 años con antecedentes de cirrosis hepática alcohólica Child-Pugh C es traído a urgencias por somnolencia, desorientación y cambios de conducta. Al examen mental: disminución marcada de la capacidad atencional e incapacidad para mantener el foco en la entrevista (hipoprosexia), bradilalia, bradipsiquia, flapping (asterixis) en ambas manos e hiperreflexia. No hay signos de focalización motora en pares craneales ni rigidez nucal. Laboratorio: Amonio en sangre de 145 µmol/L (elevado), tiempos de coagulación prolongados.",
+                "preguntas": [
+                    {
+                        "pregunta": "39. En la semiología psiquiátrica del examen mental, ¿cómo se clasifica la alteración de la atención presentada por el paciente (incapacidad para fijar o mantener la atención)?",
+                        "opA": "Aprosodia afectiva.",
+                        "opB": "Hipoprosexia (o dispersión atencional).",
+                        "opC": "Hiperprosexia concentrada.",
+                        "opD": "Paramnesia reduplicativa.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "En el manual de PSIQUIATRÍA.pdf (sección 'Examen del Estado Mental - Atención'), se define la Hipoprosexia como la disminución evidente del nivel de atención y concentración, donde el paciente es incapaz de enfocar o mantener la atención voluntaria sobre la entrevista clínica."
+                    },
+                    {
+                        "pregunta": "40. Si este paciente requiere el uso puntual de una benzodiacepina para controlar una crisis convulsiva o agitación por abstinencia en el contexto de su insuficiencia hepática grave, ¿cuál de los siguientes fármacos es el de elección por no requerir metabolismo de oxidación hepática por el citocromo P450 (fase I)?",
+                        "opA": "Diazepam.",
+                        "opB": "Lorazepam (o Oxazepam / Temazepam).",
+                        "opC": "Clonazepam.",
+                        "opD": "Midazolam a dosis altas.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "PSIQUIATRÍA.pdf recalca que el Lorazepam (junto con Oxazepam y Temazepam) es de elección segura en pacientes con cirrosis o insuficiencia hepática porque su metabolización se realiza exclusivamente mediante conjugación con glucurónido en Fase II, sin depender del sistema hepático microsomal CYP450."
+                    }
+                ]
+            }
+        ];
+
+        //-------------EDITAR: fin del arreglo de casos clínicos.
+
+        // Normalización de la estructura de Casos Clínicos a una lista plana de preguntas
+
+
+        function obtenerPreguntasDeCasos(casos) {
+            let preguntasProcesadas = [];
+            casos.forEach(caso => {
+                caso.preguntas.forEach(p => {
+                    preguntasProcesadas.push({
+                        ...p,
+                        explicacionCaso: caso.explicacionCaso
+                    });
+                });
+            });
+            return preguntasProcesadas;
+        }
+
+        let modoActual = 'preguntas'; // 'preguntas' o 'casos'
+        let listaActual = mockPreguntas;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        const questionCounter = document.getElementById("question-counter");
+        const scoreCounter = document.getElementById("score-counter");
+        const progressBar = document.getElementById("progress-bar");
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const feedbackContainer = document.getElementById("feedback-container");
+        const feedbackTitle = document.getElementById("feedback-title");
+        const feedbackText = document.getElementById("feedback-text");
+        const nextBtn = document.getElementById("next-btn");
+        const quizContainer = document.getElementById("quiz-container");
+        const resultsCard = document.getElementById("results-card");
+        const caseContainer = document.getElementById("case-container");
+        const caseDescription = document.getElementById("case-description");
+        const modeQuestionsBtn = document.getElementById("mode-questions-btn");
+        const modeCasesBtn = document.getElementById("mode-cases-btn");
+
+        function cambiarModo(nuevoModo) {
+            modoActual = nuevoModo;
+            if (modoActual === 'preguntas') {
+                listaActual = mockPreguntas;
+                modeQuestionsBtn.className = "btn btn-primary btn-mode";
+                modeCasesBtn.className = "btn btn-outline-primary btn-mode";
+            } else {
+                listaActual = obtenerPreguntasDeCasos(mockCasos);
+                modeQuestionsBtn.className = "btn btn-outline-primary btn-mode";
+                modeCasesBtn.className = "btn btn-primary btn-mode";
+            }
+            reiniciarQuiz();
+        }
+
+        function cargarPregunta() {
+            answered = false;
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+
+            const currentData = listaActual[currentQuestionIndex];
+
+            // Renderizar caso clínico si aplica
+            if (currentData.explicacionCaso) {
+                caseDescription.innerText = currentData.explicacionCaso;
+                caseContainer.classList.remove("d-none");
+            } else {
+                caseContainer.classList.add("d-none");
+            }
+
+            questionCounter.innerText = `Pregunta ${currentQuestionIndex + 1} de ${listaActual.length}`;
+            scoreCounter.innerText = `Aciertos: ${score}`;
+            const progressPercent = ((currentQuestionIndex) / listaActual.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            questionText.innerText = currentData.pregunta;
+            optionsContainer.innerHTML = "";
+
+            const opcionesMap = [
+                { key: "opA", text: currentData.opA },
+                { key: "opB", text: currentData.opB },
+                { key: "opC", text: currentData.opC },
+                { key: "opD", text: currentData.opD }
+            ];
+
+            opcionesMap.forEach(op => {
+                const btn = document.createElement("button");
+                btn.className = "btn btn-outline-secondary option-btn";
+                btn.innerHTML = `<strong>${op.key.replace('op', '').toUpperCase()}.</strong> ${op.text}`;
+                btn.onclick = () => seleccionarRespuesta(op.key, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function seleccionarRespuesta(opcionSeleccionada, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const currentData = listaActual[currentQuestionIndex];
+            const botones = optionsContainer.getElementsByTagName("button");
+
+            for (let btn of botones) {
+                btn.disabled = true;
+            }
+
+            if (opcionSeleccionada === currentData.respuestaCorrecta) {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("correct-answer");
+                score++;
+                scoreCounter.innerText = `Aciertos: ${score}`;
+
+                feedbackTitle.innerText = "¡Correcto! 🎉";
+                feedbackContainer.className = "alert alert-success mt-3";
+            } else {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("incorrect-answer");
+
+                for (let btn of botones) {
+                    if (btn.innerHTML.startsWith(`<strong>${currentData.respuestaCorrecta.replace('op', '').toUpperCase()}.</strong>`)) {
+                        btn.classList.remove("btn-outline-secondary");
+                        btn.classList.add("correct-answer");
+                    }
+                }
+
+                feedbackTitle.innerText = "Incorrecto ❌";
+                feedbackContainer.className = "alert alert-danger mt-3";
+            }
+
+            feedbackText.innerText = currentData.explicacion;
+            feedbackContainer.classList.remove("d-none");
+            nextBtn.classList.remove("d-none");
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < listaActual.length) {
+                cargarPregunta();
+            } else {
+                mostrarResultados();
+            }
+        };
+
+        function mostrarResultados() {
+            quizContainer.classList.add("d-none");
+            caseContainer.classList.add("d-none");
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+            progressBar.style.width = "100%";
+
+            document.getElementById("final-score").innerText = `Tu calificación final es: ${score} de ${listaActual.length} aciertos`;
+            resultsCard.classList.remove("d-none");
+        }
+
+        function reiniciarQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultsCard.classList.add("d-none");
+            quizContainer.classList.remove("d-none");
+            cargarPregunta();
+        }
+
+        // Carga Inicial
+        cargarPregunta();
+    </script>
+    <script src="../pwa.js" defer></script>
+</body>
+
+</html>
