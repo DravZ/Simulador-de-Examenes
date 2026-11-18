@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3869c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../images/icons/icon-192x192.png">
+    <title>Simulador de Examen - Medicina Legal</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"
+        aria-describedby="install-description">
+        <div class="install-content">
+            <p class="install-love"><strong><em>Hola preciosa, espero te sirva. Te amo</em></strong></p>
+            <h2 id="install-title">Descarga la aplicación</h2>
+            <p id="install-description" class="install-description">
+                Instala la aplicación para abrir tus cuestionarios y usarlos sin conexión.
+            </p>
+            <div class="install-actions">
+                <button id="install-app-button" type="button">Descargar aplicación</button>
+                <button id="install-close-button" class="install-close" type="button">Ahora no</button>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="container">
+        <a class="btn btn-outline-primary home-button" href="../index.html">
+            <span>
+                < Volver al inicio</span>
+        </a>
+
+        <div class="offline-actions">
+            <button id="offline-toggle" class="btn btn-outline-primary" type="button"
+                data-offline-url="../Cuestionarios/MedLegal%205_2.html" disabled>
+                Preparar para usar sin conexión
+            </button>
+            <p id="offline-status" class="offline-status" role="status" aria-live="polite">
+                Comprobando el acceso sin conexión...
+            </p>
+        </div>
+
+        <div class="text-center mb-3">
+            <h2 class="fw-bold text-primary">Simulador</h2>
+            <p class="text-muted">Pon a prueba tus conocimientos paso a paso</p>
+        </div>
+
+        <!-- Controles para seleccionar modalidad -->
+        <div class="mode-selector">
+            <button id="mode-questions-btn" class="btn btn-primary btn-mode"
+                onclick="cambiarModo('preguntas')">Preguntas Directas</button>
+            <button id="mode-cases-btn" class="btn btn-outline-primary btn-mode" onclick="cambiarModo('casos')">Casos
+                Clínicos</button>
+        </div>
+
+        <div class="card-quiz">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span id="question-counter" class="badge bg-secondary">Pregunta 1 de X</span>
+                <span id="score-counter" class="badge bg-success">Aciertos: 0</span>
+            </div>
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <!-- Caja para la descripción del caso clínico (Oculta por defecto) -->
+            <div id="case-container" class="case-card d-none">
+                <h5 class="fw-bold mb-2">📌 Caso Clínico:</h5>
+                <p id="case-description"></p>
+            </div>
+
+            <div id="quiz-container">
+                <h4 id="question-text" class="fw-bold mb-4 text-dark">Cargando pregunta...</h4>
+
+                <div class="options-grid mb-4" id="options-container">
+                </div>
+            </div>
+
+            <div id="feedback-container" class="alert d-none mt-3">
+                <h5 id="feedback-title" class="fw-bold mb-1"></h5>
+                <p id="feedback-text"></p>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button id="next-btn" class="btn btn-primary btn-lg d-none">Siguiente Pregunta</button>
+            </div>
+
+        </div>
+
+        <div id="results-card" class="card-quiz text-center d-none mt-4">
+            <h3 class="fw-bold text-success mb-3">¡Simulador Finalizado!</h3>
+            <p class="mb-2">Has completado todas las preguntas.</p>
+            <h4 id="final-score" class="fw-bold text-primary mb-4"></h4>
+            <button onclick="reiniciarQuiz()" class="btn btn-outline-primary btn-lg">Volver a Intentar</button>
+        </div>
+    </div>
+
+    <script>
+
+        const mockPreguntas = [
+            {
+                "pregunta": "1. ¿En qué consiste el delito de Estupro según la doctrina de la medicina legal y la legislación penal?",
+                "opA": "En la imposición del coito mediante el uso de fuerza física o violencia moral irresistible sobre la víctima.",
+                "opB": "En la realización de la copulación con una persona menor de edad (mayor de 12 y menor de 18 años) obteniendo su consentimiento mediante seducción o engaño.",
+                "opC": "En la introducción de objetos o instrumentos en cavidades corporal distintas a la vaginal o anal sin consentimiento.",
+                "opD": "En la agresión sexual cometida exclusivamente en el entorno de subordinación laboral o docente.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El estupro se tipifica como la realización del coito con persona menor de edad obteniendo su consentimiento a través de la seducción o el engaño, diferenciándose de la violación por la ausencia de violencia física o moral coercitiva. (Ref. MED LEGAL-1.pdf, págs. 3-4)."
+            },
+            {
+                "pregunta": "2. Durante el examen gineco-forense de una víctima de presunta agresión sexual, ¿cuál es el hallazgo anatómico imprescindible para diagnosticar una desfloración completa?",
+                "opA": "Una laceración superficial de la mucosa vulvar que no compromete la membrana himeneal.",
+                "opB": "Una solución de continuidad o desgarro traumático que se extiende hasta la base de inserción del himen en la pared vaginal.",
+                "opC": "La presencia de una escotadura congénita fisiológica en el borde libre del himen.",
+                "opD": "El borramiento temporal de los pliegues vaginales sin ruptura de tejido.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: En medicina legal, la desfloración se define estrictamente como la ruptura o solución de continuidad del himen que alcanza la base de inserción en la pared vaginal. Si la lesión es incompleta o no llega a la base, se clasifica como desgarro himeneal incompleto o fisura. (Ref. MED LEGAL-1.pdf, pág. 6)."
+            },
+            {
+                "pregunta": "3. En la valoración de la antigüedad de una lesión himeneal, ¿cuál es la evolución macroscópica característica en los primeros 15 días posteriores al traumatismo?",
+                "opA": "En los primeros 3 días los bordes sangran al tocarlos con algodón; posteriormente se forma una capa de fibrina blanquecina y al presionar con gasa sangran entre los 10 y 15 días, tras lo cual cicatrizan por completo.",
+                "opB": "Los bordes epitelizan totalmente en las primeras 12 horas sin formar depósito fibrinoso.",
+                "opC": "El tejido desflorado genera cicatrización hipertrófica de forma inmediata a la 6ª hora.",
+                "opD": "El lecho himeneal permanece sangrando activamente de forma continua durante 30 días.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: Durante los primeros 3 días post-trauma, el roce suave provoca sangrado fresco; luego se forma un depósito de fibrina blanquecino que al comprimirse con gasa puede volver a sangrar hasta los 10-15 días, momento en el cual culmina la cicatrización. (Ref. MED LEGAL-1.pdf, pág. 6)."
+            },
+            {
+                "pregunta": "4. ¿Cómo se denomina en sexología forense a la parafilia caracterizada por la obtención de gratificación erótica mediante la observación secreta y clandestina de personas desnudas o en actos íntimos?",
+                "opA": "Exhibicionismo.",
+                "opB": "Voyeurismo, Scoptofilia o Mixoscopia.",
+                "opC": "Eonismo o Transvestismo.",
+                "opD": "Necrofilia.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El voyeurismo (también denominado scoptofilia o mixoscopia) es la parafilia donde la excitación y satisfacción sexual se obtienen al contemplar clandestinamente a terceros en situaciones íntimas o desnudamiento. (Ref. MED LEGAL-2.pdf, pág. 15)."
+            },
+            {
+                "pregunta": "5. En la clasificación de las modalidades del Sadismo según el grado de violencia ejercido sobre la víctima, ¿cuáles son las manifestaciones descritas en el Sadismo Menor?",
+                "opA": "Mutilaciones genitales y homicidio de la víctima.",
+                "opB": "Cortes extensos con tijeras y cuchillos para ver brotar sangre abundante.",
+                "opC": "Actos de perversidad leve como mordiscos, pellizcos, azotes o quemaduras superficiales con cigarrillo.",
+                "opD": "Profanación de cadavérica con fines sexuales.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "Fundamento Médico-Legal: El Sadismo Menor abarca conductas lesivas leves (mordeduras, pellizcos, azotes, quemaduras de cigarrillo). El Sadismo Medio involucra cortes y presencia de sangre, mientras que el Sadismo Mayor abarca mutilaciones y homicidio sadístico. (Ref. MED LEGAL-2.pdf, pág. 16)."
+            },
+            {
+                "pregunta": "6. ¿Qué cuadro psicopatológico puede desencadenar impotencia sexual masculina secundaria por aversión o fobia extrema al acto coital?",
+                "opA": "Satyriasis morbosa.",
+                "opB": "Coitofobia.",
+                "opC": "Vaginismo primario.",
+                "opD": "Eonismo compulsivo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La coitofobia es el terror o fobia irracional a la realización del coito, constituyendo una causa psicógena de impotencia sexual masculina (impotencia erectogénica o coeundi). (Ref. MED LEGAL-2.pdf, pág. 22)."
+            },
+            {
+                "pregunta": "7. ¿Qué caracteriza al fenómeno sexológico conocido como Eonismo o Transvestismo en el estudio de las desviaciones sexuales?",
+                "opA": "El deseo de causar dolor físico a la pareja para alcanzar el orgasmo.",
+                "opB": "La adopción del atuendo, gestos y rol social del sexo opuesto para obtener satisfacción psicológica o erótica.",
+                "opC": "La atracción erótica hacia objetos inanimados de vestir.",
+                "opD": "La imposibilidad fisiológica de lograr la eyaculación.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El eonismo o transvestismo consiste en la inclinación a vestirse y comportarse como un individuo del sexo opuesto, buscando satisfacción emocional o sexual. (Ref. MED LEGAL-2.pdf, pág. 14)."
+            },
+            {
+                "pregunta": "8. En el examen pericial de un delito de violación, ¿cuál es la toma de muestra biológica prioritaria en la víctima para la identificación genética del agresor?",
+                "opA": "Frotis de mucosa bucal de la víctima únicamente.",
+                "opB": "Hisopado vaginal/anal/oral para la búsqueda de espermatozoides y perfil de ADN en fosfatasa ácida y antígeno prostático específico (PSA).",
+                "opC": "Muestra de sangre venosa periférica para cultivo bacteriano.",
+                "opD": "Biopsia de tejido adiposo cutáneo.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: En la exploración por agresión sexual, la búsqueda de líquido seminal mediante hisopado de cavidades (vaginal, anal, bucal) permite identificar espermatozoides, actividad de fosfatasa ácida y Antígeno Prostático Específico (PSA/p30), cruciales para el aislamiento de ADN del agresor. (Ref. MED LEGAL-1.pdf, págs. 5-7)."
+            },
+            {
+                "pregunta": "9. Durante la necropsia forense de un caso de envenenamiento por metales inorgánicos, se observa una tinción de color azul intenso en la mucosa gástrica. ¿A qué sustancia tóxica corresponde esta tinción?",
+                "opA": "Ácido Pícrico.",
+                "opB": "Sulfato de Cobre.",
+                "opC": "Sales de Plomo.",
+                "opD": "Monóxido de Carbono.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: En la inspección macroscópica del estómago en autopsias toxicológicas, el sulfato de cobre imparte una coloración azul a la mucosa gástrica; el ácido pícrico la tiñe de amarillo y las sales de plomo le dan una tonalidad blanco lechosa. (Ref. MED LEGAL-3.pdf, pág. 31)."
+            },
+            {
+                "pregunta": "10. ¿Cuáles son las muestras biológicas mínimas recomendadas y sus volúmenes en un protocolo de autopsia para análisis toxicológico completo?",
+                "opA": "1 mL de saliva y 1 gramo de cabello únicamente.",
+                "opB": "Contenido gástrico total y 60 cm de yeyuno-íleon; Hígado (500 g), Encéfalo (500 g), medio riñón de cada lado; Orina total y Mínimo 100 mL de sangre.",
+                "opC": "Líquido cefalorraquídeo 5 mL y pericardio.",
+                "opD": "Hueso largo completo y 10 cm² de piel.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El protocolo de recolección en tanatotoxicología requiere enviar al laboratorio: estómago con contenido y ~60 cm de intestino delgado, 500 g de hígado, 500 g de encéfalo, medio riñón por lado, la totalidad de la orina contenida en vejiga y un mínimo de 100 mL de sangre periférica. (Ref. MED LEGAL-4.pdf, pág. 32)."
+            },
+            {
+                "pregunta": "11. En la farmacocinética del alcohol etílico, ¿cuál es la principal vía metabólica hepática y el tipo de cinética de eliminación que presenta?",
+                "opA": "Oxidación por la Alcohol Deshidrogenasa (ADH) a Acetaldehído y Aldehído Deshidrogenasa (ALDH) a Acetato, siguiendo una cinética de eliminación de orden cero.",
+                "opB": "Sulfoconjugación renal directa con cinética de primer orden a razón de 5 g/L por hora.",
+                "opC": "Excreción pulmonar pura del 90% del alcohol consumido.",
+                "opD": "Hidrólisis pancreática por lipasa con eliminación exponencial.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El etanol es metabolizado en el hígado por el sistema enzimático ADH/ALDH a acetaldehído y acetato. Su eliminación es de orden cero (tasa constante e independiente de la concentración plasmática), eliminándose entre 0.15 y 0.20 g/L por hora. (Ref. MED LEGAL-4.pdf, pág. 33)."
+            },
+            {
+                "pregunta": "12. De acuerdo con la clasificación laboratorial de la ebriedad de Bogen, ¿a qué etapa y concentración plasmática corresponde un individuo con marcha zigzagueante, disartria, diplopía y 2.0 a 3.0 g/L de alcohol en sangre?",
+                "opA": "Primera Etapa de Bogen.",
+                "opB": "Tercera Etapa de Bogen.",
+                "opC": "Quinta Etapa de Bogen.",
+                "opD": "Sexta Etapa de Bogen.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La Tercera Etapa de Bogen abarca concentraciones de 2.0 a 3.0 mg/cm³ (2 a 3 g/L), manifestando pérdida de coordinación motora, vértigo, disartria y ataxia marcada. (Ref. MED LEGAL-5.pdf, pág. 41)."
+            },
+            {
+                "pregunta": "13. ¿Cuál es el límite máximo autorizado por la Ley General de Salud en México para el consumo personal e inmediato de Marihuana (Cannabis sativa)?",
+                "opA": "5 gramos.",
+                "opB": "28 gramos.",
+                "opC": "500 miligramos.",
+                "opD": "100 gramos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La Ley General de Salud de México establece en su tabla de dosis máximas de consumo personal e inmediato la cantidad de 28 gramos para la Marihuana. (Ref. MED LEGAL-6.pdf, pág. 46)."
+            },
+            {
+                "pregunta": "14. Según la Ley General de Salud en México, ¿cuál es la dosis máxima autorizada de Cocaína para el consumo personal e inmediato?",
+                "opA": "500 miligramos (0.5 gramos).",
+                "opB": "5 gramos.",
+                "opC": "10 gramos.",
+                "opD": "100 miligramos.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La tabla de exención de punibilidad por consumo personal e inmediato de la Ley General de Salud fija el tope máximo de Cocaína en 500 mg. (Ref. MED LEGAL-6.pdf, pág. 52)."
+            },
+            {
+                "pregunta": "15. ¿Qué cuadro clínico y tanatológico caracteriza a la intoxicación por Estricnina?",
+                "opA": "Parálisis flácida progresiva y somnolencia profunda.",
+                "opB": "Convulsiones tetánicas, opistótonos, risa sardónica por antagonismo del receptor de glicina, y rigidez cadavérica precoz y duradera hasta por 7 días.",
+                "opC": "Cianosis intensa por carboxihemoglobina y livideces rojo cereza.",
+                "opD": "Miosis puntiforme y bradicardia extrema.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La estricnina bloquea los receptores de glicina provocando hiperreflexia, opistótonos y risa sardónica. En el cadáver genera una rigidez precoz y notablemente persistente que puede durar hasta 7 días. (Ref. MED LEGAL-3.pdf, pág. 30; MED LEGAL-7.pdf, págs. 61-63)."
+            },
+            {
+                "pregunta": "16. ¿Qué efecto neuropsiquiátrico crónico se describe en el consumo prolongado y persistente de Cannabis/Marihuana?",
+                "opA": "Síndrome amotivacional, caracterizado por apatía, abulia, disminución del rendimiento intelectual y falta de metas.",
+                "opB": "Demencia presenil de tipo Alzheimer de inicio rápido.",
+                "opC": "Síndrome extrapiramidal irreversible.",
+                "opD": "Corea de Huntington sintomática.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El consumo crónico de cannabis se asocia al desarrollo del síndrome amotivacional, caracterizado por deterioro de la atención, pasividad, abulia y falta de motivación personal o social. (Ref. MED LEGAL-6.pdf, págs. 45-47)."
+            },
+            {
+                "pregunta": "17. ¿Cuál es la alteración anatomopatológica cardiovascular y pulmonar habitualmente hallada en autopsias por sobredosis de Cocaína?",
+                "opA": "Miocarditis parasitaria y enfisema masivo bulloso.",
+                "opB": "Isquemia o infarto miocárdico agudo secundario a vasoespasmo coronario, congestión y edema agudo de pulmón con áreas de hemorragia focal.",
+                "opC": "Aneurisma disecante de aorta exclusivamente abdominal.",
+                "opD": "Calcificación masiva de la válvula mitral.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: Por su acción simpaticomimética intensa, la cocaína produce vasoconstricción coronaria, arritmias, infarto de miocardio, así como severa congestión y edema pulmonar con focos hemorrágicos. (Ref. MED LEGAL-6.pdf, págs. 50-53)."
+            },
+            {
+                "pregunta": "18. En el protocolo de conservación de muestras destinadas a peritaje toxicoforense, ¿por qué motivo está contraindicado el uso de formol o preservadores químicos sintéticos?",
+                "opA": "Porque el formol acelera la proliferación bacteriana en la muestra.",
+                "opB": "Porque los preservadores químicos interfieren en las reacciones cromatográficas y destruyen o alteran la estructura de los tóxicos a analizar, debiendo emplearse únicamente la refrigeración o congelación.",
+                "opC": "Porque incrementa el volumen de la sangre en un 300%.",
+                "opD": "Porque transforma el alcohol etílico en metanol espontáneamente.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La conservación de muestras biológicas para toxicología debe realizarse mediante refrigeración o congelación sin aditivos ni formaldehído, ya que estos reaccionan con los tóxicos e invalidan las pruebas espectrofotométricas y cromatográficas. (Ref. MED LEGAL-4.pdf, pág. 32)."
+            },
+            {
+                "pregunta": "19. ¿Cuál es el antídoto o tratamiento antagonista específico indicado ante una intoxicación aguda por insecticidas organofosforados o sustancias colinérgicas?",
+                "opA": "Naloxona.",
+                "opB": "Atropina (antagonista competitivo de receptores muscarínicos).",
+                "opC": "Flumazenil.",
+                "opD": "N-acetilcisteína.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: En el síndrome colinérgico por organofosforados, la atropina actúa como antagonista competitivo sobre los receptores muscarínicos de acetilcolina, revirtiendo la broncorrea, bradicardia y miosis. (Ref. MED LEGAL-7.pdf, págs. 58-60)."
+            },
+            {
+                "pregunta": "20. En la valoración pericial de un sujeto intoxicado por disolventes orgánicos e inhalables (ej. tolueno, benceno), ¿cuál es el sistema orgánico más vulnerable a la toxicidad aguda y crónica?",
+                "opA": "Sistema nervioso central (depresión, encefalopatía toxicodependiente) y sistema hematopoyético/renal.",
+                "opB": "Sistema osteoarticular exclusivamente.",
+                "opC": "Aparato reproductor externo únicamente.",
+                "opD": "Tímpano y cadena de huesecillos del oído.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: Los disolventes volátiles son altamentes lipofílicos, afectando prioritariamente al SNC (cefalea, ataxia, alteración del estado de conciencia) y produciendo daño renal, hepático y de la médula ósea en exposición crónica. (Ref. MED LEGAL-7.pdf, págs. 54-56)."
+            },
+            {
+                "pregunta": "21. En la metodología de preservación del Lugar de los Hechos en campo abierto, ¿cuál es el radio mínimo recomendado para el acordonamiento perimetral de seguridad?",
+                "opA": "5 metros a la redonda.",
+                "opB": "Cuando menos 50 metros a la redonda.",
+                "opC": "1000 metros obligatorios.",
+                "opD": "No requiere acordonamiento perimetral.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La norma criminalística establece que en escenas al aire libre o fincas aisladas se debe restringir el acceso con un perímetro de protección de al menos 50 metros a la redonda para evitar la alteración o pérdida de indicios. (Ref. MED LEGAL-9.pdf, pág. 76)."
+            },
+            {
+                "pregunta": "22. ¿Cuáles son las '7 Preguntas de Oro' de la criminalística de campo que orientan la investigación en la escena del delito?",
+                "opA": "¿Qué?, ¿Quién?, ¿Cuándo?, ¿Cómo?, ¿Dónde?, ¿Por qué?, ¿Con qué?",
+                "opB": "¿Cuánto?, ¿Para qué?, ¿Cuál?, ¿Por quién?, ¿De qué?, ¿En qué?, ¿Hacia dónde?",
+                "opC": "¿Juez?, ¿Fiscal?, ¿Defensor?, ¿Perito?, ¿Víctima?, ¿Testigo?, ¿Secretario?",
+                "opD": "¿Policía?, ¿Ambulancia?, ¿Hospital?, ¿Necropsia?, ¿Juzgado?, ¿Prisión?, ¿Libertad?",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La investigación criminalística se articula respondiendo a las 7 interrogantes fundamentales: ¿Qué sucedió?, ¿Quién es la víctima/autor?, ¿Cuándo ocurrió?, ¿Cómo se cometió?, ¿Dónde se ejecutó?, ¿Por qué se realizó?, y ¿Con qué medio se perpetró? (Ref. MED LEGAL-9.pdf, págs. 78-79)."
+            },
+            {
+                "pregunta": "23. ¿Qué método de fijación planimétrica de la escena del crimen utiliza la triangulación o coordenadas desde puntos fijos inamovibles?",
+                "opA": "Croquis planimétrico de Kenyeres.",
+                "opB": "Fotografía de filiación de Bertillon.",
+                "opC": "Moldeado en yeso ortopédico.",
+                "opD": "Retrato hablado analógico.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El croquis o sistema planimétrico de Kenyeres permite fijar matemáticamente la ubicación de indicios y del cadáver relacionándolos con puntos fijos de la escena. (Ref. MED LEGAL-9.pdf, pág. 78)."
+            },
+            {
+                "pregunta": "24. ¿A partir de qué edad se considera aplicable el sistema de identificación Antropométrico de Alphonse Bertillon y en qué se fundamenta?",
+                "opA": "Desde los 5 años mediante huellas palmares.",
+                "opB": "A partir de los 20 años de edad, basándose en la invariabilidad de las dimensiones óseas del esqueleto una vez alcanzada la madurez adulta.",
+                "opC": "A partir de los 50 años por desmineralización ósea.",
+                "opD": "En recién nacidos mediante la longitud del cordón umbilical.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El sistema bertilloniano o antropométrico requiere que el esqueleto haya completado su crecimiento (alrededor de los 20 años), momento en que las medidas óseas permanecen estables a lo largo de la vida. (Ref. MED LEGAL-8.pdf, pág. 68)."
+            },
+            {
+                "pregunta": "25. ¿Qué rama de la dermopapiloscopia forense se ocupa del estudio e identificación de las crestas papilares presentes en las plantas de los pies?",
+                "opA": "Dactiloscopia.",
+                "opB": "Palametoscopia.",
+                "opC": "Pelmatoscopia.",
+                "opD": "Poroscopia.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "Fundamento Médico-Legal: La pelmatoscopia estudia los dibujos y crestas papilares de las plantas de los pies, siendo una herramienta clave en neonatología e identificación forense. (Ref. MED LEGAL-8.pdf, pág. 69)."
+            },
+            {
+                "pregunta": "26. En el análisis de impresiones dactilares fragmentarias, ¿qué método analiza microscópicamente la forma, tamaño y posición de los orificios sudoríparos en las crestas?",
+                "opA": "Poroscopia de Locard.",
+                "opB": "Cheiloscopia.",
+                "opC": "Palatoscopia.",
+                "opD": "Otometría.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La Poroscopia desarrollada por Edmond Locard evalúa la disposición de los poros de las glándulas sudoríparas en las crestas papilares para lograr la identificación a partir de fragmentos dactilares mínimos. (Ref. MED LEGAL-8.pdf, pág. 69)."
+            },
+            {
+                "pregunta": "27. ¿Cómo se denomina al método médico-legal de identificación basado en la disposición de la red venosa subcutánea del dorso de las manos y antebrazos?",
+                "opA": "Método de Capville.",
+                "opB": "Método de Tamassia y Amenille.",
+                "opC": "Método cefalométrico de Alfonso.",
+                "opD": "Método de Levinsohn.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El método de Tamassia y Amenille estudia la distribución de la red venosa subcutánea en manos y antebrazos como patrón individualizador. (Ref. MED LEGAL-8.pdf, pág. 70)."
+            },
+            {
+                "pregunta": "28. ¿Qué principio fundamental rige la Cadena de Custodia de los indicios recabados en el lugar de los hechos?",
+                "opA": "Permitir la manipulación de indicios por cualquier persona en el juzgado.",
+                "opB": "Garantizar el registro ininterrumpido de la identidad, localización, empaque, traslado, análisis y resguardo de cada evidencia desde su hallazgo hasta la resolución judicial.",
+                "opC": "Mezclar indicios de distintas escenas en un mismo contenedor.",
+                "opD": "Lavar todos los indicios con antisépticos antes de empaquetarlos.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La cadena de custodia asegura la autenticidad e mismidad de las pruebas demostrando que no han sufrido sustitución, alteración o contaminación durante el proceso pericial y judicial. (Ref. MED LEGAL-8.pdf, pág. 72; MED LEGAL-9.pdf)."
+            },
+            {
+                "pregunta": "29. ¿Quién es considerado el 'Padre de la Medicina del Trabajo' por su tratado de 1700 sobre las enfermedades de las distintas profesiones?",
+                "opA": "Bernardino Ramazzini.",
+                "opB": "Ambroise Paré.",
+                "opC": "Mateu Orfila.",
+                "opD": "Alphonse Bertillon.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: Bernardino Ramazzini publicó en 1700 la obra 'De Morbis Artificum Diatriba', hito fundador de la patología laboral y la salud ocupacional. (Ref. MED LEGAL-10.pdf, pág. 11)."
+            },
+            {
+                "pregunta": "30. Según el artículo 474 de la Ley Federal del Trabajo en México, ¿cómo se define un Accidente de Trabajo?",
+                "opA": "Toda enfermedad degenerativa de lento desarrollo producida a lo largo de 20 años de servicio.",
+                "opB": "Toda lesión orgánica o perturbación funcional, inmediata o posterior, la muerte o la desaparición derivada de un acto delincuencial, producida repentinamente en ejercicio o con motivo del trabajo.",
+                "opC": "Cualquier traumatismo sufrido por el trabajador durante sus vacaciones.",
+                "opD": "La autolesión voluntaria para obtener prestaciones indemnizatorias.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La LFT define el accidente de trabajo por la concurrencia de una lesión o perturbación orgánica o funcional producida repentinamente en ejercicio o con motivo del trabajo. (Ref. MED LEGAL-9.pdf, pág. 80; MED LEGAL-10.pdf, pág. 10)."
+            },
+            {
+                "pregunta": "31. ¿Qué denominación recibe el accidente laboral ocurrido durante el trayecto directo del trabajador desde su domicilio hacia el centro de trabajo o viceversa?",
+                "opA": "Accidente in itinere o accidente en trayecto.",
+                "opB": "Accidente por fuerza mayor fortuita.",
+                "opC": "Riesgo no profesional común.",
+                "opD": "Incapacidad por imprudencia intencional.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El accidente *in itinere* tutela el traslado del trabajador entre su residencia y su puesto de trabajo, equiparándose legalmente a un accidente laboral directo. (Ref. MED LEGAL-9.pdf, pág. 81)."
+            },
+            {
+                "pregunta": "32. De acuerdo con la Ley Federal del Trabajo, ¿cuál de las siguientes situaciones exime totalmente al patrón de la responsabilidad por un riesgo de trabajo?",
+                "opA": "Si el accidente ocurre mientras el trabajador opera maquinaria sin protección fallida.",
+                "opB": "Si el accidente ocurre estando el trabajador en estado de embriaguez o bajo el efecto de drogas sin prescripción médica.",
+                "opC": "Si el trabajador prestaba servicio en jornada extraordinaria autorizada.",
+                "opD": "Si el percance ocurre dentro de las instalaciones de la empresa en horario ordinario.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La Ley contempla como eximentes patronales el estado de embriaguez, el consumo de narcóticos no prescritos, la autolesión voluntaria y las lesiones derivadas de riña o intendo de suicidio. (Ref. MED LEGAL-9.pdf, pág. 81; MED LEGAL-10.pdf, págs. 13-14)."
+            },
+            {
+                "pregunta": "33. ¿Qué caracteriza a la Incapacidad Permanente Total en la evaluación de los riesgos de trabajo?",
+                "opA": "La pérdida de facultades que imposibilita a la persona para desempeñar su trabajo por un periodo temporal de 30 días.",
+                "opB": "La disminución parcial de la capacidad laboral que permite continuar en el puesto con adaptaciones.",
+                "opC": "La pérdida absoluta de facultades o aptitudes que imposibilita al individuo de por vida para desempeñar cualquier trabajo.",
+                "opD": "La secuela estética mínima que no interfiere con la función motora.",
+                "respuestaCorrecta": "opC",
+                "explicacion": "Fundamento Médico-Legal: La Incapacidad Permanente Total implica la pérdida definitiva e irreversible de la capacidad del trabajador para incorporarse a cualquier actividad laboral. (Ref. MED LEGAL-10.pdf, pág. 12)."
+            },
+            {
+                "pregunta": "34. En la culpa médica, ¿a qué concepto corresponde la actuación profesional con falta de conocimientos técnicos o pericia teórica y práctica necesarios para la praxis médica?",
+                "opA": "Impericia.",
+                "opB": "Negligencia.",
+                "opC": "Imprudencia.",
+                "opD": "Inobservancia de reglamentos.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La impericia es la carencia de los conocimientos, entrenamiento o habilidades indispensables que exige la lex artis para el ejercicio de la medicina. (Ref. MED LEGAL-10.pdf)."
+            },
+            {
+                "pregunta": "35. ¿A qué modalidad de falta médica corresponde la conducta de realizar un acto riesgoso de forma temeraria o apresurada, 'haciendo lo que no se debe' o sobrepasando las medidas de prudencia?",
+                "opA": "Imprudencia.",
+                "opB": "Negligencia.",
+                "opC": "Impericia.",
+                "opD": "Dolo directo.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La imprudencia médica radica en el actuar atrevido o temerario donde se asumen riesgos injustificados sin la debida cautela. (Ref. MED LEGAL-10.pdf)."
+            },
+            {
+                "pregunta": "36. ¿En qué consiste la Negligencia Médica como forma de responsabilidad culposa?",
+                "opA": "En la falta de habilidad motora durante la cirugía.",
+                "opB": "En el descuido, la desidia o la omisión consciente de los deberes de atención, 'no haciendo lo que la norma médica exige hacer'.",
+                "opC": "En el cumplimiento estricto de las guías de práctica clínica.",
+                "opD": "En la comisión de un delito intencional con dolo predeterminado.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La negligencia se caracteriza por la pasividad, desatención o pasarse por alto las precauciones necesarias (omisión de lo debido). (Ref. MED LEGAL-10.pdf)."
+            },
+            {
+                "pregunta": "37. ¿Cuál es el diagnóstico diferencial medico-legal entre el himen complaciente y la desfloración antigua?",
+                "opA": "El himen complaciente presenta escotaduras congénitas con bordes regulares y elasticidad que permite el paso del pene sin desgarrarse; la desfloración antigua presenta cicatrices con bordes retraídos y pérdida de continuidad hasta la base.",
+                "opB": "El himen complaciente sangra activamente en cada coito.",
+                "opC": "La desfloración antigua no deja evidencia cicatricial detectable.",
+                "opD": "Ambos hallazgos son imposibles de diferenciar mediante el examen con estilete abotonado.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El himen complaciente posee un orificio dilatado o elástico con muescas congénitas sin cicatriz que permite la penetración sin rotura. La desfloración previa presenta cicatrices continuas hasta el borde de inserción. (Ref. MED LEGAL-1.pdf, págs. 5-7)."
+            },
+            {
+                "pregunta": "38. ¿Qué se entiende por Necrofilia en la clasificación de las parafilias de objeto?",
+                "opA": "La fijación erótica hacia personas de la tercera edad.",
+                "opB": "La atracción, excitación o contacto sexual realizado con cadáveres humanos.",
+                "opC": "La necesidad de infligir dolor en animales domésticos.",
+                "opD": "La preferencia por ropa interior usada.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La necrofilia es la desviación sexual u objetal en la cual la persona obtiene placer y gratificación erótica mediante la manipulación o copulación con cadavéres. (Ref. MED LEGAL-2.pdf, págs. 14-16)."
+            },
+            {
+                "pregunta": "39. Durante la investigación de un homicidio con sospecha de intoxicación, se analiza la muestra de orina. ¿Por qué la orina es una matriz biológica privilegiada en el tamizaje toxicológico?",
+                "opA": "Porque no contiene metabolitos de drogas.",
+                "opB": "Porque permite detectar xenobióticos y sus metabolitos durante ventanas de tiempo más amplias que la sangre y en concentraciones más elevadas.",
+                "opC": "Porque elimina la necesidad de procesar el contenido gástrico.",
+                "opD": "Porque el alcohol nunca se elimina por vía renal.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La orina es la principal vía de excreción de metabolitos tóxicos, ofreciendo una ventana de detección más prolongada y concentrada que el plasma. (Ref. MED LEGAL-4.pdf, pág. 32)."
+            },
+            {
+                "pregunta": "40. En el examen de alcoholemia, ¿cuál es el factor de conversión aproximado entre la concentración de alcohol en aire espirado (BAC) y la concentración en sangre periférica?",
+                "opA": "1 : 1.",
+                "opB": "2100 : 1 (2100 mL de aire alveolar contienen aproximadamente la misma cantidad de alcohol que 1 mL de sangre).",
+                "opC": "10000 : 1.",
+                "opD": "50 : 1.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El principio de los alcoholímetros se basa en la relación de equilibrio sangre/aire alveolar de aproximadamente 2100 a 1. (Ref. MED LEGAL-4.pdf, pág. 33; MED LEGAL-5.pdf)."
+            },
+            {
+                "pregunta": "41. ¿Qué es el Síndrome de Abstinencia o Deprivación en el contexto de la dependencia a opiáceos/morfina?",
+                "opA": "Un estado de analgesia y relajación muscular profunda.",
+                "opB": "Un conjunto de signos y síntomas hiperadrenérgicos y dolorosos (midriasis, piloerección, diarrea, rinorrea, espasmos abdominales) desencadenados al suspender el consumo en un sujeto dependiente.",
+                "opC": "La ganancia de peso brusca por retención hídrica.",
+                "opD": "Un cuadro exclusivo de rash cutáneo urticariforme.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La supresión de opiáceos en individuos físicamente dependientes genera una tormenta de hiperactividad simpática y gastrointestinal (síndrome de abstinencia). (Ref. MED LEGAL-7.pdf, págs. 59-61)."
+            },
+            {
+                "pregunta": "42. ¿Qué diferencia al Falso Tatuaje o Ahumamiento del Tatuaje Verdadero por fuego de arma de fuego en criminalística?",
+                "opA": "El ahumamiento está incrustado en la dermis y no se quita lavando.",
+                "opB": "El ahumamiento es el depósito superficial de hollín lavable con agua y jabón, mientras que el tatuaje verdadero es la incrustación indeleble de granos de pólvora incombusta en la piel.",
+                "opC": "El tatuaje verdadero solo aparece en disparos a más de 50 metros.",
+                "opD": "Ambos son completamente removibles mediante el raspado suave.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El ahumamiento se elimina mediante lavado superficial; el tatuaje de pólvora involucra la penetración dérmica de partículas de pólvora incombusta que resultan inlavables. (Ref. MED LEGAL-8.pdf, págs. 66-68)."
+            },
+            {
+                "pregunta": "43. ¿Qué es la Dactiloscopia y en qué principios biológicos de las crestas papilares se sustenta?",
+                "opA": "Es la ciencia que estudia las dimensiones del cráneo humano.",
+                "opB": "Es la disciplina que identifica a las personas mediante las impresiones digitales, fundamentada en la perennidad, inmutabilidad y diversidad (variedad infinita) de las crestas papilares.",
+                "opC": "Es el estudio de la escritura manual en documentos dudosos.",
+                "opD": "Es la medición de la frecuencia cardíaca perimórtem.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: Los tres pilares de la dactiloscopia son: Perennidad (aparecen desde el 6º mes intrauterino hasta la putrefacción), Inmutabilidad (no cambian con el tiempo o enfermedades) y Diversidad (no hay dos huellas iguales). (Ref. MED LEGAL-8.pdf, pág. 69)."
+            },
+            {
+                "pregunta": "44. En el análisis criminalístico del lugar de los hechos, ¿cuál es el objetivo primordial de la reconstrucción gráfica mediante la fotografía forense?",
+                "opA": "Sustituir la elaboración de actas escritas e informes periciales.",
+                "opB": "Perpetuar de forma objetiva, detallada y fiel el estado original de la escena, los indicios y el cadáver antes de cualquier manipulación.",
+                "opC": "Publicar las imágenes en medios de comunicación.",
+                "opD": "Determinar la causa química de la muerte sin necesidad de necropsia.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La fotografía forense registra documentalmente la escena con vistas generales, medias, acercamientos y grandes acercamientos con testigo métrico antes de levantar las evidencias. (Ref. MED LEGAL-9.pdf, pág. 77)."
+            },
+            {
+                "pregunta": "45. ¿En qué consiste una Enfermedad de Trabajo según la Ley Federal del Trabajo?",
+                "opA": "Todo estado patológico derivado de la acción continuada de una causa que tenga su origen o motivo en el trabajo o en el medio en que el trabajador se vea obligado a prestar sus servicios.",
+                "opB": "Un traumatismo agudo accidental producido en un segundo.",
+                "opC": "Cualquier padecimiento congénito manifestado a partir de los 60 años.",
+                "opD": "Un cuadro gripal contraído durante las vacaciones del empleado.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El artículo 475 de la LFT define la Enfermedad de Trabajo por la exposición continuada a factores de riesgo ocupacionales (físicos, químicos, ergonómicos o biológicos). (Ref. MED LEGAL-9.pdf, pág. 80; MED LEGAL-10.pdf, pág. 10)."
+            },
+            {
+                "pregunta": "46. ¿Qué se comprende bajo la categoría de Incapacidad Permanente Parcial en la Medicina del Trabajo?",
+                "opA": "La disminución irreversible de las facultades o aptitudes de una persona para trabajar en un determinado porcentaje.",
+                "opB": "La muerte repentina del trabajador durante el descanso semanal.",
+                "opC": "La falta injustificada al puesto laboral por 3 días consecutivos.",
+                "opD": "El reposo médico por gripe estacional de 5 días de duración.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: La Incapacidad Permanente Parcial implica la pérdida o disminución definitiva de ciertas funciones o miembros, permitiendo al trabajador realizar tareas adaptadas. (Ref. MED LEGAL-10.pdf, pág. 12)."
+            },
+            {
+                "pregunta": "47. ¿Qué es el Secreto Profesional Médico y bajo qué circunstancias legales el médico queda eximido de guardarlo?",
+                "opA": "Es la obligación de no revelar datos del paciente, quedando eximido ante el mandato judicial expreso, notificación obligatoria de enfermedades transmisibles o ante la presunta comisión de delitos perseguibles de oficio.",
+                "opB": "Es un acuerdo verbal revocable en cualquier momento sin valor legal.",
+                "opC": "Es la prohibición absoluta de hablar con otros médicos del mismo equipo quirúrgico.",
+                "opD": "Es un privilegio exclusivo del paciente que impide informar a las autoridades en caso de herida por arma de fuego.",
+                "respuestaCorrecta": "opA",
+                "explicacion": "Fundamento Médico-Legal: El secreto médico tutela la intimidad del paciente, pero cede por justa causa legal (denuncia de delitos por arma de fuego/lesiones graves, requerimiento judicial o salud pública). (Ref. MED LEGAL-10.pdf y Deontología Médica)."
+            },
+            {
+                "pregunta": "48. ¿En qué consiste la Inobservancia de Reglamentos o Deberes como modalidad de culpa profesional médica?",
+                "opA": "En realizar un diagnóstico certero mediante estudios sofisticados.",
+                "opB": "En la omisión o incumplimiento de las leyes, normas oficiales (NOM), reglamentos u órdenes internas del establecimiento de salud que rigen la práctica médica.",
+                "opC": "En el cobro de honorarios médicos de forma anticipada.",
+                "opD": "En la sustitución temporal de un colega con su consentimiento.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: Ocurre cuando el profesional desacata o ignora las disposiciones normativas obligatorias (como Normas Oficiales Mexicanas de expediente clínico o consentimiento informado). (Ref. MED LEGAL-10.pdf)."
+            },
+            {
+                "pregunta": "49. ¿Cuál es la definición médico-legal de la Consentimiento Informado en la práctica clínica?",
+                "opA": "La firma de una carta en blanco al momento del ingreso hospitalario.",
+                "opB": "El proceso verbal y escrito mediante el cual el paciente o su representante legal autoriza un procedimiento diagnóstico o terapéutico tras haber recibido información clara, oportuna y completa sobre los riesgos, beneficios y alternativas.",
+                "opC": "La orden emitida unilateralmente por el médico sin explicación al paciente.",
+                "opD": "Un documento exclusivo para exonerar al médico de toda responsabilidad penal por negligencia.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: El consentimiento informado respeta el principio de autonomía del paciente, garantizando que este comprenda el alcance y riesgos del acto médico antes de otorgar su anuencia. (Ref. MED LEGAL-10.pdf y Deontología Médica)."
+            },
+            {
+                "pregunta": "50. En el estudio pericial de la simulación de patologías en la Medicina del Trabajo, ¿qué se entiende por 'Metasimulación'?",
+                "opA": "La invención total de síntomas en un sujeto completamente sano.",
+                "opB": "La exageración o alegación de la persistencia intencionada de síntomas de una lesión o enfermedad que realmente existió pero que ya ha curado o consolidado.",
+                "opC": "La provocación voluntaria de lesiones cutáneas autodirigidas.",
+                "opD": "La negación deliberada de un padecimiento laboral real.",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Fundamento Médico-Legal: La metasimulación consiste en la prolongación o exageración consciente de síntomas tras la resolución o curación biológica de una enfermedad o accidente previo con la finalidad de obtener un beneficio pecuniario o laboral. (Ref. MED LEGAL-10.pdf, págs. 14-15)."
+            }
+        ];
+
+
+        const mockCasos = [
+            {
+                "explicacionCaso": "Caso 1: Se presenta a valoración gineco-forense una femenina de 15 años de edad en compañía de sus tutores legales. Refiere que desde hace 3 meses sostiene relaciones sexuales vaginales consentidas con su pareja de 22 años, quien la convenció mediante promesas de matrimonio y engaños sentimentales. En la exploración física pericial se observa mucosa vulvar intacta y una membrana himeneal anular con una solución de continuidad completa a las 6 del reloj que se extiende hasta el borde de inserción en la pared vaginal, con bordes cicatrizados, retraídos y sin sangrado activo al contacto.",
+                "preguntas": [
+                    {
+                        "pregunta": "1. De acuerdo con la tipificación de delitos sexuales en la legislación y doctrina médico-legal, ¿cuál es la clasificación jurídica correspondiente a este evento?",
+                        "opA": "Violación equiparada por uso de fuerza física moral coercitiva.",
+                        "opB": "Estupro, al haberse realizado la copulación consentida con una menor de 18 años mediante engaño o seducción.",
+                        "opC": "Abuso sexual simple no coital.",
+                        "opD": "Hostigamiento sexual en el ámbito docente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El estupro se configura cuando se realiza el coito con persona mayor de 12 y menor de 18 años obteniendo su consentimiento a través del engaño o la seducción, sin violencia física. (Ref. MED LEGAL-1.pdf, págs. 3-4)."
+                    },
+                    {
+                        "pregunta": "2. ¿Cómo se clasifica médico-legalmente el hallazgo himeneal observado durante la exploración gineco-forense?",
+                        "opA": "Desgarro incompleto superficial reciente con fibrina.",
+                        "opB": "Desfloración completa antigua, al presentar una ruptura que llega a la base de inserción con bordes cicatrizados de más de 15 días de evolución.",
+                        "opC": "Escotadura congénita fisiológica anular.",
+                        "opD": "Himen complaciente ablandado sin desfloración.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La desfloración se diagnostica cuando el desgarro himeneal alcanza la base de inserción. Al presentar bordes retraídos e indoloros sin sangrado tras 15 días, se clasifica como antigua. (Ref. MED LEGAL-1.pdf, pág. 6)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 2: En un punto de control de sobriedad, es detenido un conductor masculino de 34 años de edad. Al interrogatorio pericial presenta disartria marcada, diplopía, incoordinación motora severa, ataxia con marcha en zig-zag y lenguaje incomprensible. Se le toma muestra de sangre venosa periférica procesada mediante cromatografía de gases, obteniendo una alcoholemia cuantitativa de 2.4 g/L (2.4 mg/cm³).",
+                "preguntas": [
+                    {
+                        "pregunta": "3. Según la clasificación laboratorial de la intoxicación etílica aguda desarrollada por Bogen, ¿a qué etapa corresponde este cuadro sintomático y analítico?",
+                        "opA": "Primera Etapa de Bogen (subclínica o euforia leve).",
+                        "opB": "Tercera Etapa de Bogen (incoordinación motora y ebriedad manifiesta).",
+                        "opC": "Quinta Etapa de Bogen (coma alcohólico profundo).",
+                        "opD": "Sexta Etapa de Bogen (muerte por paro respiratorio).",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La Tercera Etapa de Bogen abarca concentraciones de 2.0 a 3.0 g/L (mg/cm³), manifestando disartria, ataxia, marcha tambaleante y diplopía. (Ref. MED LEGAL-5.pdf, pág. 41)."
+                    },
+                    {
+                        "pregunta": "4. En el análisis toxicocinético del etanol, ¿cuál es la enzima hepática principal encargada de su oxidación inicial a acetaldehído y qué tasa constante de eliminación presenta?",
+                        "opA": "Citocromo P450 2E1 eliminando 1.0 g/L por hora.",
+                        "opB": "Alcohol Deshidrogenasa (ADH), eliminando el alcohol con una cinética de orden cero a una tasa de 0.15 a 0.20 g/L por hora.",
+                        "opC": "Catalasa peroxisomal eliminando 0.05 g/L por hora.",
+                        "opD": "Aldehído Deshidrogenasa (ALDH) eliminando 0.50 g/L por hora.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El alcohol se metaboliza principalmente por la enzima ADH a acetaldehído y sigue una cinética de orden cero con una eliminación constante de 0.15 a 0.20 g/L/h. (Ref. MED LEGAL-4.pdf, pág. 33)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 3: Cadáver de masculino de 28 años hallado en un departamento. En la escena se aseguran sobres con polvo blanco. El dictamen químico confirma cocaína pura. La necropsia revela midriasis bilateral, congestión vascular encefálica y edema agudo pulmonar masivo con petequias e infartos hemorrágicos subendocárdicos. Durante el cateo previo, se encontró al fallecido portando una dosis individual de 400 miligramos del estupefaciente.",
+                "preguntas": [
+                    {
+                        "pregunta": "5. Con base en la Ley General de Salud en México, ¿cómo se clasifica legalmente la posesión de 400 mg de cocaína hallada en pertenencias del sujeto para su consumo inmediato?",
+                        "opA": "Delito grave de narcotráfico internacional.",
+                        "opB": "Dosis máxima autorizada para consumo personal e inmediato (límite legal de 500 mg), exenta de punibilidad por narcomenudeo.",
+                        "opC": "Delito de portación ilegal de precursores químicos sintéticos.",
+                        "opD": "Violación a la Ley Federal de Armas de Fuego y Explosivos.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La Ley General de Salud en su tabla de exención de punibilidad fija en 500 mg la dosis máxima de cocaína para consumo personal e inmediato. (Ref. MED LEGAL-6.pdf, pág. 52)."
+                    },
+                    {
+                        "pregunta": "6. ¿Cuál es el mecanismo fisiopatológico cardiovascular que explica la muerte repentina en la sobredosis de cocaína?",
+                        "opA": "Bloqueo neuromuscular periférico irreversible.",
+                        "opB": "Vasoconstricción coronaria intensa por estimulación simpático-adrenérgica, isquemia miocárdica, arritmias ventriculares letales y edema pulmonar.",
+                        "opC": "Depresión pura del centro respiratorio bulbar por agonismo mu.",
+                        "opD": "Inhibición de la síntesis de eritropoyetina.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La cocaína provoca un estímulo simpaticomimético masivo con espasmo de arterias coronarias, arritmias, infarto de miocardio y edema agudo de pulmón. (Ref. MED LEGAL-6.pdf, págs. 50-53)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 4: Un masculino de 22 años es presentado ante el agente del Ministerio Público al ser sorprendido fumando marihuana en la vía pública y portando una bolsa de plástico con 20 gramos de hierba verde seca. En la valoración médica muestra inyección conjuntival bilateral, taquicardia (110 lpm), sequedad de boca y lentitud en el tiempo de reacción. Refiere consumir desde hace 4 años, presentando apatía y abandono escolar.",
+                "preguntas": [
+                    {
+                        "pregunta": "7. Desde la perspectiva de la Ley General de Salud de México, ¿cuál es la situación legal de la posesión de los 20 gramos de cannabis asegurados?",
+                        "opA": "Constituye delito de tráfico a gran escala.",
+                        "opB": "Se encuentra dentro de la dosis máxima autorizada de consumo personal e inmediato (hasta 28 gramos), sin considerarse narcomenudeo.",
+                        "opC": "Excede en 10 veces la dosis legal permitida.",
+                        "opD": "Requiere prisión preventiva oficiosa inmediata.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La Ley General de Salud permite la posesión de hasta 28 gramos de marihuana para consumo personal e inmediato. (Ref. MED LEGAL-6.pdf, pág. 46)."
+                    },
+                    {
+                        "pregunta": "8. ¿Qué cuadro neuropsiquiátrico crónico describe la literatura médico-legal en consumidores consuetudinarios de tetrahidrocannabinol (THC)?",
+                        "opA": "Síndrome de Landry-Guillain-Barré.",
+                        "opB": "Síndrome amotivacional, caracterizado por abulia, apatía, falta de metas personales y deterioro del rendimiento intelectual.",
+                        "opC": "Demencia tipo Huntington precoz.",
+                        "opD": "Síndrome de Korsakoff.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El consumo crónico de marihuana se relaciona con el síndrome amotivacional, donde el sujeto manifiesta pérdida de interés, abulia y disminución del rendimiento académico/laboral. (Ref. MED LEGAL-6.pdf, págs. 45-47)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 5: Se reporta el hallazgo de un cadáver con múltiples heridas en un predio baldío al aire libre. La primera patrulla policial arriba a la escena. El oficial al mando procede a acordonar la zona instalando cinta de seguridad a una distancia perimetral de 50 metros a la redonda respecto a la posición del cuerpo, impidiendo el ingreso de curiosos y medios de comunicación hasta la llegada del equipo pericial.",
+                "preguntas": [
+                    {
+                        "pregunta": "9. Con base en los protocolos de preservación del lugar de los hechos, ¿cómo se evalúa el procedimiento de acordonamiento realizado por la autoridad en este terreno abierto?",
+                        "opA": "Deficiente, porque debió ser de 2 metros solamente.",
+                        "opB": "Correcto y apegado a la técnica criminalística, la cual establece un cerco perimetral de seguridad de al menos 50 metros a la redonda en campo abierto para evitar la contaminación de indicios.",
+                        "opC": "Incorrecto, la ley exige cerrar 5 kilómetros a la redonda.",
+                        "opD": "Innecesario, ya que la fijación fotográfica sustituye la protección física.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: En lugares de los hechos abiertos o fincas aisladas, la norma criminalística requiere establecer un radio de protección de por lo menos 50 metros para salvaguardar la evidencia. (Ref. MED LEGAL-9.pdf, pág. 76)."
+                    },
+                    {
+                        "pregunta": "10. Durante la inspección técnico-pericial de la escena, ¿cuál es la secuencia ordenada de las llamadas '7 Preguntas de Oro' que debe responder el perito en su dictamen?",
+                        "opA": "¿Qué?, ¿Quién?, ¿Cuándo?, ¿Cómo?, ¿Dónde?, ¿Por qué?, ¿Con qué?",
+                        "opB": "¿Cuánto?, ¿Para qué?, ¿Cuál?, ¿Por quién?, ¿De qué?, ¿En qué?, ¿Hacia dónde?",
+                        "opC": "¿Juez?, ¿Fiscal?, ¿Defensor?, ¿Perito?, ¿Víctima?, ¿Testigo?, ¿Secretario?",
+                        "opD": "¿Policía?, ¿Ambulancia?, ¿Hospital?, ¿Necropsia?, ¿Juzgado?, ¿Prisión?, ¿Libertad?",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: Las 7 preguntas de oro criminalísticas orientan la investigación del hecho punible: ¿Qué?, ¿Quién?, ¿Cuándo?, ¿Cómo?, ¿Dónde?, ¿Por qué? y ¿Con qué? (Ref. MED LEGAL-9.pdf, págs. 78-79)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 6: En la identificación de un individuo no identificado de aproximadamente 25 años de edad implicado en un proceso judicial, el perito en identificación aplica el sistema antropométrico de Bertillon tomando las dimensiones del diámetro craneal, longitud del pie izquierdo y envergadura. Asimismo, analiza las impresiones dactilares y de las plantas de los pies.",
+                "preguntas": [
+                    {
+                        "pregunta": "11. ¿A partir de qué edad se considera científicamente válido el método antropométrico de Bertillon y en qué principio se sustenta?",
+                        "opA": "A partir del nacimiento, basándose en la estabilidad de la piel.",
+                        "opB": "A partir de los 20 años de edad, momento en que el esqueleto humano alcanza la madurez ósea y sus dimensiones permanecen fijas e invariables.",
+                        "opC": "A los 10 años, sustentado en la dentición temporal.",
+                        "opD": "A los 60 años, por fijación cartilaginosa.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El bertillonaje antropométrico exige una edad mínima de 20 años, periodo en el que las estructuras óseas del adulto dejan de crecer y permanecen estables. (Ref. MED LEGAL-8.pdf, pág. 68)."
+                    },
+                    {
+                        "pregunta": "12. ¿Qué especialidad de la dermopapiloscopia forense se encarga del análisis de los dibujos papilares en las plantas de los pies para la identificación pericial?",
+                        "opA": "Dactiloscopia.",
+                        "opB": "Pelmatoscopia.",
+                        "opC": "Poroscopia.",
+                        "opD": "Palametoscopia.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La pelmatoscopia es la rama lofoscópica que estudia las crestas y surcos papilares de la superficie plantar del pie. (Ref. MED LEGAL-8.pdf, pág. 69)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 7: En un objeto hallado en la escena del crimen se recupera un fragmento de huella dactilar incompleto que contiene solo 3 crestas papilares utilizables. El especialista emplea microscopía de alta resolución para analizar los orificios de las glándulas sudoríparas. En forma complementaria, para identificar a un sospechoso vivo se realiza la comparación de la red venosa del dorso de su mano.",
+                "preguntas": [
+                    {
+                        "pregunta": "13. ¿Cómo se denomina la técnica microscópica ideada por Edmond Locard para la identificación a partir de los orificios sudoríparos en fragmentos dactilares mínimos?",
+                        "opA": "Poroscopia de Locard.",
+                        "opB": "Cheiloscopia.",
+                        "opC": "Otometría forense.",
+                        "opD": "Palatoscopia.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La Poroscopia de Locard estudia la forma, tamaño y número de los poros sudoríparos a lo largo de las crestas papilares para la identificación dactilar fragmentaria. (Ref. MED LEGAL-8.pdf, pág. 69)."
+                    },
+                    {
+                        "pregunta": "14. ¿Qué método médico-legal se fundamenta en el trazado e individualización anatómica de la red venosa subcutánea del dorso de la mano y antebrazo?",
+                        "opA": "Método de Capville.",
+                        "opB": "Método de Tamassia y Amenille.",
+                        "opC": "Método cefalométrico de Alfonso.",
+                        "opD": "Método de Levinsohn.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El método venoso de Tamassia y Amenille evalúa la disposición arborescente de las venas del dorso de las manos y antebrazo. (Ref. MED LEGAL-8.pdf, pág. 70)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 8: Paciente masculino de 40 años es llevado a urgencias por presentar espasmos musculares violentos, hiperextensión corporal en opistótonos, rigidez de los músculos faciales con expresión de risa sardónica y convulsiones desencadenadas por un aplauso o estímulo luminoso. Fallece por asfixia por parálisis de los músculos respiratorios. En la necropsia se aprecia una rigidez cadavérica precoz e intensa que no cede.",
+                "preguntas": [
+                    {
+                        "pregunta": "15. ¿Cuál es el tóxico responsable de este cuadro neurotóxico caracterizado por antagonismo competitivo sobre los receptores de glicina?",
+                        "opA": "Atropina.",
+                        "opB": "Estricnina.",
+                        "opC": "Monóxido de Carbono.",
+                        "opD": "Cianuro de potasio.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La intoxicación por estricnina genera convulsiones tetánicas, opistótonos, risa sardónica y rigidez cadavérica precoz y persistente. (Ref. MED LEGAL-3.pdf, pág. 30; MED LEGAL-7.pdf, págs. 61-63)."
+                    },
+                    {
+                        "pregunta": "16. ¿Qué característica distingue el desarrollo de la rigidez cadavérica en la autopsia de un individuo fallecido por intoxicación por estricnina?",
+                        "opA": "Flacidez muscular permanente que dura más de un mes.",
+                        "opB": "Rigidez de aparición sumamente precoz que se instala casi de inmediato y persiste de manera duradera hasta por 7 días.",
+                        "opC": "Ausencia total de contracción en el diafragma.",
+                        "opD": "Saponificación instantánea de la piel.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La estricnina acelera la rigidez cadavérica por agotamiento del ATP muscular, instaurándose velozmente y manteniéndose hasta por 7 días post mórtem. (Ref. MED LEGAL-3.pdf, pág. 30; MED LEGAL-7.pdf, pág. 62)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 9: Un obrero de una fábrica textil sufre el atrapamiento y amputación traumática de dos dedos de la mano derecha mientras operaba una prensa industrial en su turno laboral. El apoderado de la empresa argumenta que el hecho no debe calificarse como accidente de trabajo porque el operario cometió una distracción menor durante la maniobra.",
+                "preguntas": [
+                    {
+                        "pregunta": "17. ¿Quién es reconocido en la historia de la medicina como el 'Padre de la Medicina del Trabajo' por documentar las patologías de los artesanos en 1700?",
+                        "opA": "Bernardino Ramazzini.",
+                        "opB": "Ambroise Paré.",
+                        "opC": "Mateu Orfila.",
+                        "opD": "Alphonse Bertillon.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: Bernardino Ramazzini es el Padre de la Medicina del Trabajo por su tratado pionero 'De Morbis Artificum Diatriba' de 1700. (Ref. MED LEGAL-10.pdf, pág. 11)."
+                    },
+                    {
+                        "pregunta": "18. Con base en el artículo 474 de la Ley Federal del Trabajo en México, ¿es procedente la calificación de Accidente de Trabajo en este caso?",
+                        "opA": "No, porque cualquier distracción del operario anula la responsabilidad patronal.",
+                        "opB": "Sí, porque se trata de una lesión orgánica producida repentinamente en ejercicio o con motivo del trabajo, independientemente de la torpeza o imprudencia no intencional del trabajador.",
+                        "opC": "No, solo las enfermedades crónicas se consideran riesgos laborales.",
+                        "opD": "Sí, pero requiere probar la existencia de dolo del patrón.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El accidente de trabajo abarca toda lesión repentina con motivo o en ejercicio del empleo; la simple imprudencia profesional no exime al patrón según la LFT. (Ref. MED LEGAL-9.pdf, pág. 80; MED LEGAL-10.pdf, pág. 10)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 10: Un empleado administrativo colisiona en su motocicleta al dirigirse en ruta directa desde su casa hacia su centro de trabajo a las 07:30 horas (su horario de entrada es a las 08:00). Al llegar los servicios de emergencia, se le practica prueba de alcoholemia detectando 2.2 g/L de alcohol en sangre. La empresa rechaza el riesgo de trabajo.",
+                "preguntas": [
+                    {
+                        "pregunta": "19. ¿Cómo se denomina legalmente al accidente producido en el trayecto directo entre el domicilio del trabajador y el lugar de labores?",
+                        "opA": "Accidente in itinere o en trayecto.",
+                        "opB": "Accidente por causa mayor fortuita.",
+                        "opC": "Riesgo común no tutelado.",
+                        "opD": "Incapacidad por enfermedad general.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: El accidente *in itinere* tutela el traslado directo entre el hogar y el centro laboral. (Ref. MED LEGAL-9.pdf, pág. 81)."
+                    },
+                    {
+                        "pregunta": "20. Atendiendo a la Ley Federal del Trabajo, ¿es válida la exención de responsabilidad patronal interpuesta por la empresa ante este percance?",
+                        "opA": "No, el patrón siempre debe pagar aunque el trabajador esté intoxicado.",
+                        "opB": "Sí, es procedente la exención patronal porque el trabajador se encontraba en estado de embriaguez al momento del accidente.",
+                        "opC": "No, porque ocurrió antes de ingresar a la fábrica.",
+                        "opD": "Sí, pero únicamente si el trabajador renuncia voluntariamente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La Ley Federal del Trabajo libera al patrón de responsabilidad cuando el accidente ocurre encontrándose el trabajador en estado de ebriedad. (Ref. MED LEGAL-9.pdf, pág. 81; MED LEGAL-10.pdf, págs. 13-14)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 11: Un médico general decide realizar en su consultorio particular un procedimiento quirúrgico complejo de liposucción de alta definición para el cual no cuenta con cédula de especialista ni adiestramiento en cirugía plástica. Durante la intervención perfora el asa yeyunal de la paciente provocando peritonitis fecal y shock séptico.",
+                "preguntas": [
+                    {
+                        "pregunta": "21. ¿A qué forma de culpa médica corresponde haber actuado sin poseer los conocimientos técnicos, formación quirúrgica especializada ni destreza probada?",
+                        "opA": "Impericia.",
+                        "opB": "Negligencia.",
+                        "opC": "Imprudencia exclusiva.",
+                        "opD": "Caso fortuito ineludible.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La impericia es la falta de sabiduría, habilidad o conocimientos técnicos requeridos para ejecutar un acto médico especializado. (Ref. MED LEGAL-10.pdf)."
+                    },
+                    {
+                        "pregunta": "22. La decisión del profesional de emprender un procedimiento quirúrgico mayor invasivo en un entorno ambulatorio no equipado representa también:",
+                        "opA": "Cumplimiento estricto de la lex artis.",
+                        "opB": "Imprudencia, al haber asumido un riesgo temerario innecesario desatendiendo las reglas de cautela (hacer lo que no se debe).",
+                        "opC": "Ejercicio legítimo de la libertad prescritiva.",
+                        "opD": "Falta de consentimiento del familiar.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La imprudencia consiste en una conducta temeraria o atrevida en la que el médico asume riesgos desproporcionados sin la infraestructura adecuada. (Ref. MED LEGAL-10.pdf)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 12: En una sala de recuperación postquirúrgica, la enfermera y el médico a cargo omiten revisar las indicaciones médicas y no monitorean los signos vitales de un paciente operado de hernia inguinal durante 4 horas. El paciente sufre depresión respiratoria por opioides que avanza a paro cardiorrespiratorio y daño cerebral anóxico.",
+                "preguntas": [
+                    {
+                        "pregunta": "23. ¿A qué modalidad de culpa médica corresponde la omisión del deber de cuidado y la desidia o descuido en la vigilancia del paciente?",
+                        "opA": "Impericia técnica.",
+                        "opB": "Negligencia (omisión de la conducta debida exigida por la lex artis).",
+                        "opC": "Dolo eventual en primer grado.",
+                        "opD": "Inobservancia del libre arbitrio.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La negligencia implica descuido, pasividad o falta de aplicación en la ejecución de los actos médicos y de enfermería obligatorios. (Ref. MED LEGAL-10.pdf)."
+                    },
+                    {
+                        "pregunta": "24. Si durante la atención de este paciente el médico tratante es citado por un juez penal a declarar como perito o testigo sobre heridas de bala descubiertas en el sujeto, ¿qué ocurre con el secreto profesional?",
+                        "opA": "El médico incurre en delito si declara ante el juez.",
+                        "opB": "El secreto profesional cede ante el mandato judicial expreso y ante la obligación de denunciar hechos constitutivos de delitos perseguibles de oficio.",
+                        "opC": "El médico debe ser encarcelado por informar a la autoridad.",
+                        "opD": "El secreto profesional es absoluto e infranqueable bajo cualquier circunstancia.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El secreto médico no es absoluto; cede legalmente ante el mandato del juez o la obligación legal de denunciar delitos de persecución oficiosa. (Ref. MED LEGAL-10.pdf)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 13: Un sujeto de 30 años es sorprendido instalando cámaras ocultas en forma de tornillo en los baños de damas de un centro comercial para registrar en video a mujeres desnudas. Al ser interrogado por el perito psiquiatra forense, confiesa que únicamente obtiene excitación y eyaculación al revisar posteriormente las grabaciones clandestinas.",
+                "preguntas": [
+                    {
+                        "pregunta": "25. ¿Cómo se tipifica la conducta de este individuo dentro del catálogo de las parafilias o desviaciones sexuales?",
+                        "opA": "Exhibicionismo.",
+                        "opB": "Voyeurismo, Scoptofilia o Mixoscopia.",
+                        "opC": "Fetichismo de prendas.",
+                        "opD": "Sadismo medio.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El voyeurismo o scoptofilia es la parafilia enfocada en la observación furtiva de personas en situaciones íntimas para obtener placer erótico. (Ref. MED LEGAL-2.pdf, pág. 15)."
+                    },
+                    {
+                        "pregunta": "26. ¿Cuál es la diferencia primordial entre el Voyeurismo y el Exhibicionismo en sexología forense?",
+                        "opA": "El voyeurista busca mostrar sus propios genitales a extraños en la vía pública, mientras el exhibicionista observa en secreto.",
+                        "opB": "El voyeurista obtiene placer observando clandestinamente a otros sin ser visto, mientras que el exhibicionista logra la gratificación exponiendo sus propios genitales a personas no consentidoras.",
+                        "opC": "El voyeurismo requiere el uso de violencia física letal.",
+                        "opD": "Ambas parafilias son idénticas en su manifestación clínica.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El voyeurista es un observador pasivo y oculto; el exhibicionista busca la sorpresa e impacto de la víctima mostrando activamente sus órganos sexuales. (Ref. MED LEGAL-2.pdf, págs. 14-15)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 14: En un baldío es localizado el cadáver de una mujer con múltiples mutilaciones de la región genital y mamaria, incisiones profundas con extracción de órganos abdominales y heridas punzantes dispersas. La investigación revela que el agresor privó de la vida a la víctima durante un ritual de agresión erótica violenta para lograr el orgasmo.",
+                "preguntas": [
+                    {
+                        "pregunta": "27. De acuerdo con la clasificación del Sadismo según el nivel de agresión a la víctima, ¿en qué categoría se ubica este caso?",
+                        "opA": "Sadismo Menor (pellizcos o mordiscos).",
+                        "opB": "Sadismo Medio (cortes superficiales con tijeras).",
+                        "opC": "Sadismo Mayor (mutilaciones graves, destrucción tisular u homicidio sadístico).",
+                        "opD": "Fetichismo de objeto inanimado.",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "Fundamento Médico-Legal: El Sadismo Mayor incluye actos lesivos gravísimos, mutilaciones genitales, necrofilia y homicidio sadístico como medio para alcanzar la gratificación sexual. (Ref. MED LEGAL-2.pdf, pág. 16)."
+                    },
+                    {
+                        "pregunta": "28. ¿Qué hallazgo tanatológico diferencia al homicidio por Sadismo Mayor de un homicidio con encubrimiento mediante mutilación post mórtem?",
+                        "opA": "La presencia de infiltración hemática en los bordes de las mutilaciones que demuestra la vitalidad de las lesiones infligidas.",
+                        "opB": "La ausencia total de sangre en la escena.",
+                        "opC": "La putrefacción acelerada de los miembros.",
+                        "opD": "La congelación espontánea del cuerpo.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: Las lesiones sadísticas infligidas en vida muestran reacción inflamatoria y sangrado vital (infiltración de los bordes), a diferencia de las mutilaciones defensivas post mórtem. (Ref. MED LEGAL-1.pdf, MED LEGAL-2.pdf)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 15: Durante la necropsia de un presunto homicidio por envenenamiento, el perito novato coloca las muestras de hígado, riñón y sangre en un frasco con solución de formol al 10% para enviar al laboratorio de toxicología forense. El laboratorio rechaza la muestra.",
+                "preguntas": [
+                    {
+                        "pregunta": "29. ¿Cuál es la razón técnica por la que está estrictamente contraindicado el uso de formol o preservantes químicos en muestras para estudio toxicológico?",
+                        "opA": "Porque el formol evapora la muestra en 5 minutos.",
+                        "opB": "Porque los fijadores químicos reaccionan con las sustancias tóxicas, alteran su estructura molecular e interfieren en los análisis de cromatografía y espectrofotometría.",
+                        "opC": "Porque incrementa la cantidad de alcohol etílico de la muestra.",
+                        "opD": "Porque el formol solo se usa en muestras vegetativas.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: Las muestras toxicobiológicas no deben fijarse con químicos ni formol; deben conservarse exclusivamente mediante refrigeración o congelación para evitar alteraciones químicas. (Ref. MED LEGAL-4.pdf, pág. 32)."
+                    },
+                    {
+                        "pregunta": "30. ¿Cuáles son los volúmenes y peso mínimos normados de órganos e hígado para la correcta remisión al laboratorio de toxicología?",
+                        "opA": "1 gramo de hígado y 1 gota de sangre.",
+                        "opB": "500 gramos de Hígado, 500 gramos de Encéfalo, medio riñón por lado, contenido gástrico completo y mínimo 100 mL de sangre.",
+                        "opC": "Corazón completo y líquido cefalorraquídeo 1 mL.",
+                        "opD": "Pulmón derecho completo únicamente.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El protocolo de autopsia toxicológica fija enviar 500 g de hígado, 500 g de encéfalo, medio riñón de cada lado, contenido gástrico total y 100 mL de sangre. (Ref. MED LEGAL-4.pdf, pág. 32)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 16: Un menor de 16 años en situación de calle es hallado sin vida con una bolsa de plástico que contiene estopa impregnada con thiner (tolueno/benceno). En la necropsia se aprecia edema cerebral severo, congestión pulmonar difusa, esteatosis hepática y degeneración tubular renal.",
+                "preguntas": [
+                    {
+                        "pregunta": "31. ¿Por qué razón los disolventes orgánicos e inhalantes volátiles se distribuyen masivamente en el cerebro y tejido nervioso?",
+                        "opA": "Por su elevada solubilidad en agua y baja afinidad proteica.",
+                        "opB": "Por su extrema lipofilia, atravesando velozmente la barrera hematoencefálica y fijándose en las estructuras ricas en mielina.",
+                        "opC": "Por unión irreversible a la hemoglobina.",
+                        "opD": "Por estimulación de la síntesis de glucosa.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: Los solventes volátiles (tolueno, benceno) son altamente lipofílicos, acumulándose en tejidos con gran contenido lipídico como el sistema nervioso central. (Ref. MED LEGAL-7.pdf, págs. 54-56)."
+                    },
+                    {
+                        "pregunta": "32. ¿Qué complicación médica letal inmediata se desencadena por la sensibilización miocárdica a las catecolaminas producida por la inhalación de solventes?",
+                        "opA": "Fibrilación ventricular letal ('muerte repentina del inhalador').",
+                        "opB": "Choque anafiláctico inmediato.",
+                        "opC": "Trombosis de la vena porta.",
+                        "opD": "Hipertrofia prostática aguda.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La exposición a inhalables sensibiliza el miocardio ante descargas adrenérgicas (ej. un susto o esfuerzo), provocando arritmias fatales o fibrilación ventricular instantánea. (Ref. MED LEGAL-7.pdf, págs. 54-56)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 17: Un trabajador de la construcción sufre una caída desde un tercer piso, sufriendo traumatismo raquimedular con sección completa de la médula espinal a nivel T4, lo que le ocasiona paraplejia irreversible e incontrol de esfínteres de por vida.",
+                "preguntas": [
+                    {
+                        "pregunta": "33. ¿Qué clasificación de incapacidad dictaminará el médico especialista en medicina del trabajo con base en la Ley Federal del Trabajo?",
+                        "opA": "Incapacidad Temporal por 15 días.",
+                        "opB": "Incapacidad Permanente Parcial del 10%.",
+                        "opC": "Incapacidad Permanente Total, por la pérdida absoluta y definitiva de facultades para desempeñar cualquier trabajo.",
+                        "opD": "Exención patronal voluntaria.",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "Fundamento Médico-Legal: La paraplejia irreversible imposibilita al trabajador para cualquier tipo de actividad laboral de por vida, configurando la Incapacidad Permanente Total. (Ref. MED LEGAL-10.pdf, pág. 12)."
+                    },
+                    {
+                        "pregunta": "34. Si el trabajador presentara en su lugar la amputación de la falange distal del dedo meñique de la mano no dominante, ¿cuál sería la clasificación?",
+                        "opA": "Incapacidad Permanente Total.",
+                        "opB": "Incapacidad Permanente Parcial.",
+                        "opC": "Enfermedad general no profesional.",
+                        "opD": "Muerte laboral ficticia.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La pérdida parcial de un segmento anatómico que disminuye en un porcentaje la capacidad funcional constituye una Incapacidad Permanente Parcial. (Ref. MED LEGAL-10.pdf, pág. 12)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 18: Un empleado sufrió un esguince lumbar leve hace 2 años, el cual curó clínica y radiológicamente a las 3 semanas. Sin embargo, continúa acudiendo a evaluaciones periciales refiriendo dolor insoportable que le impide ponerse de pie, demandando la pensión por incapacidad permanente total. El examen electromiográfico y de resonancia magnética son completamente normales.",
+                "preguntas": [
+                    {
+                        "pregunta": "35. ¿Cómo se denomina médico-legalmente a la conducta del sujeto que exagera o prolonga intencionalmente los síntomas de un padecimiento real ya curado?",
+                        "opA": "Simulación pura.",
+                        "opB": "Metasimulación.",
+                        "opC": "Sobresimulación defensiva.",
+                        "opD": "Dissimulación.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La metasimulación consiste en alegar la persistencia o severidad de síntomas atribuibles a una patología previa que biológicamente ya ha cicatrizado o sanado. (Ref. MED LEGAL-10.pdf, págs. 14-15)."
+                    },
+                    {
+                        "pregunta": "36. ¿Qué diferencia a la Simulación Pura de la Metasimulación en la peritación laboral?",
+                        "opA": "En la simulación pura el sujeto inventa totalmente una enfermedad que jamás existió; en la metasimulación prolonga los síntomas de una lesión real previa ya resuelta.",
+                        "opB": "La metasimulación ocurre de forma inconsciente por neurosis.",
+                        "opC": "La simulación pura es cometida solo por el médico tratante.",
+                        "opD": "Ambas formas son aceptadas para el otorgamiento de pensión patronal.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La simulación pura crea un cuadro patológico inexistente desde el origen; la metasimulación se apoya en un antecedente mórbido genuino para fingir secuelas. (Ref. MED LEGAL-10.pdf, págs. 14-15)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 19: Durante el procesamiento de una escena por delito sexual y homicidio, el perito embala un cuchillo ensangrentado en una bolsa de plástico sellada mientras estaba húmedo. La bolsa permanece en la cajuela de un auto a 35°C durante 5 días antes de ser entregada al laboratorio. Al abrirla, la muestra presenta putrefacción y proliferación bacteriana que destruye el ADN.",
+                "preguntas": [
+                    {
+                        "pregunta": "37. ¿Qué falla metodológica grave se cometió en el manejo de esta evidencia biológica húmeda?",
+                        "opA": "Las evidencias biológicas húmedas deben secarse al aire a temperatura ambiente y embalarse en bolsas de papel kraft respirable para evitar la maceración y destrucción de ADN.",
+                        "opB": "Debió congelarse en nitrógeno líquido a -200°C inmediatamente sin embalar.",
+                        "opC": "Debió lavarse con cloro al 10% en la escena.",
+                        "opD": "No hubo error, el plástico es el empaque universal.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La humedad atrapada en contenedores plásticos crea un microclima de condensación que destruye la evidencia biológica y el ADN; las manchas húmedas deben secarse a la sombra y guardarse en papel. (Ref. MED LEGAL-8.pdf, pág. 72; MED LEGAL-9.pdf)."
+                    },
+                    {
+                        "pregunta": "38. ¿Qué consecuencia legal produce la ruptura o vicio grave de la Cadena de Custodia sobre un indicio probatorio?",
+                        "opA": "El indicio pierde su valor probatorio e idoneidad al no poderse garantizar su autenticidad e inalterabilidad.",
+                        "opB": "Se sustituye automáticamente por una fotografía de internet.",
+                        "opC": "Obliga a condenar al sospechoso inmediatamente.",
+                        "opD": "No tiene ningún impacto en el juicio oral.",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Fundamento Médico-Legal: La alteración o contaminación de la evidencia por falta de custodia anula su fuerza probatoria al quebrantar el principio de mismidad e integridad de la prueba. (Ref. MED LEGAL-8.pdf, pág. 72)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Caso 20: Un cirujano realiza una transfusión sanguínea de emergencia a un paciente sin verificar el grupo sanguíneo y RH ni solicitar las pruebas cruzadas normadas en la Norma Oficial Mexicana correspondiente, confiando en la palabra de un familiar. El paciente sufre una reacción de incompatibilidad ABO con hemólisis masiva y fallecimiento.",
+                "preguntas": [
+                    {
+                        "pregunta": "39. ¿Qué modalidad de culpa médica se configura por el desacatamiento expreso de la Norma Oficial Mexicana para el manejo de sangre y hemocomponentes?",
+                        "opA": "Impericia exclusiva.",
+                        "opB": "Inobservancia de Reglamentos o Deberes del cargo.",
+                        "opC": "Caso fortuito ineludible.",
+                        "opD": "Dolo directo intencional.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: La inobservancia de reglamentos ocurre cuando el profesional omite deliberada o descuidadamente cumplir las disposiciones legales o Normas Oficiales Mexicanas relativas a su práctica. (Ref. MED LEGAL-10.pdf)."
+                    },
+                    {
+                        "pregunta": "40. ¿En qué consiste el Consentimiento Informado en la práctica quirúrgica y médica?",
+                        "opA": "Un trámite administrativo que exonera al médico de responsabilidad por negligencia.",
+                        "opB": "El proceso libre y razonado mediante el cual el paciente autoriza un acto médico tras recibir información clara sobre el diagnóstico, procedimiento, riesgos, beneficios y alternativas.",
+                        "opC": "La firma obligatoria impuesta bajo amenaza de no atender al paciente.",
+                        "opD": "Una autorización verbal irrevocable dada a cualquier transeúnte.",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Fundamento Médico-Legal: El consentimiento informado tutela la autonomía del paciente, exigiendo la explicación suficiente de riesgos y beneficios antes de obtener la anuencia por escrito. (Ref. MED LEGAL-10.pdf)."
+                    }
+                ]
+            }
+        ];
+        // Normalización de la estructura de Casos Clínicos a una lista plana de preguntas
+        function obtenerPreguntasDeCasos(casos) {
+            let preguntasProcesadas = [];
+            casos.forEach(caso => {
+                caso.preguntas.forEach(p => {
+                    preguntasProcesadas.push({
+                        ...p,
+                        explicacionCaso: caso.explicacionCaso
+                    });
+                });
+            });
+            return preguntasProcesadas;
+        }
+
+        let modoActual = 'preguntas'; // 'preguntas' o 'casos'
+        let listaActual = mockPreguntas;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        const questionCounter = document.getElementById("question-counter");
+        const scoreCounter = document.getElementById("score-counter");
+        const progressBar = document.getElementById("progress-bar");
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const feedbackContainer = document.getElementById("feedback-container");
+        const feedbackTitle = document.getElementById("feedback-title");
+        const feedbackText = document.getElementById("feedback-text");
+        const nextBtn = document.getElementById("next-btn");
+        const quizContainer = document.getElementById("quiz-container");
+        const resultsCard = document.getElementById("results-card");
+        const caseContainer = document.getElementById("case-container");
+        const caseDescription = document.getElementById("case-description");
+        const modeQuestionsBtn = document.getElementById("mode-questions-btn");
+        const modeCasesBtn = document.getElementById("mode-cases-btn");
+
+        function cambiarModo(nuevoModo) {
+            modoActual = nuevoModo;
+            if (modoActual === 'preguntas') {
+                listaActual = mockPreguntas;
+                modeQuestionsBtn.className = "btn btn-primary btn-mode";
+                modeCasesBtn.className = "btn btn-outline-primary btn-mode";
+            } else {
+                listaActual = obtenerPreguntasDeCasos(mockCasos);
+                modeQuestionsBtn.className = "btn btn-outline-primary btn-mode";
+                modeCasesBtn.className = "btn btn-primary btn-mode";
+            }
+            reiniciarQuiz();
+        }
+
+        function cargarPregunta() {
+            answered = false;
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+
+            const currentData = listaActual[currentQuestionIndex];
+
+            // Renderizar caso clínico si aplica
+            if (currentData.explicacionCaso) {
+                caseDescription.innerText = currentData.explicacionCaso;
+                caseContainer.classList.remove("d-none");
+            } else {
+                caseContainer.classList.add("d-none");
+            }
+
+            questionCounter.innerText = `Pregunta ${currentQuestionIndex + 1} de ${listaActual.length}`;
+            scoreCounter.innerText = `Aciertos: ${score}`;
+            const progressPercent = ((currentQuestionIndex) / listaActual.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            questionText.innerText = currentData.pregunta;
+            optionsContainer.innerHTML = "";
+
+            const opcionesMap = [
+                { key: "opA", text: currentData.opA },
+                { key: "opB", text: currentData.opB },
+                { key: "opC", text: currentData.opC },
+                { key: "opD", text: currentData.opD }
+            ];
+
+            opcionesMap.forEach(op => {
+                const btn = document.createElement("button");
+                btn.className = "btn btn-outline-secondary option-btn";
+                btn.innerHTML = `<strong>${op.key.replace('op', '').toUpperCase()}.</strong> ${op.text}`;
+                btn.onclick = () => seleccionarRespuesta(op.key, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function seleccionarRespuesta(opcionSeleccionada, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const currentData = listaActual[currentQuestionIndex];
+            const botones = optionsContainer.getElementsByTagName("button");
+
+            for (let btn of botones) {
+                btn.disabled = true;
+            }
+
+            if (opcionSeleccionada === currentData.respuestaCorrecta) {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("correct-answer");
+                score++;
+                scoreCounter.innerText = `Aciertos: ${score}`;
+
+                feedbackTitle.innerText = "¡Correcto! 🎉";
+                feedbackContainer.className = "alert alert-success mt-3";
+            } else {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("incorrect-answer");
+
+                for (let btn of botones) {
+                    if (btn.innerHTML.startsWith(`<strong>${currentData.respuestaCorrecta.replace('op', '').toUpperCase()}.</strong>`)) {
+                        btn.classList.remove("btn-outline-secondary");
+                        btn.classList.add("correct-answer");
+                    }
+                }
+
+                feedbackTitle.innerText = "Incorrecto ❌";
+                feedbackContainer.className = "alert alert-danger mt-3";
+            }
+
+            feedbackText.innerText = currentData.explicacion;
+            feedbackContainer.classList.remove("d-none");
+            nextBtn.classList.remove("d-none");
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < listaActual.length) {
+                cargarPregunta();
+            } else {
+                mostrarResultados();
+            }
+        };
+
+        function mostrarResultados() {
+            quizContainer.classList.add("d-none");
+            caseContainer.classList.add("d-none");
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+            progressBar.style.width = "100%";
+
+            document.getElementById("final-score").innerText = `Tu calificación final es: ${score} de ${listaActual.length} aciertos`;
+            resultsCard.classList.remove("d-none");
+        }
+
+        function reiniciarQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultsCard.classList.add("d-none");
+            quizContainer.classList.remove("d-none");
+            cargarPregunta();
+        }
+
+        // Carga Inicial
+        cargarPregunta();
+    </script>
+    <script src="../pwa.js" defer></script>
+</body>
+
+</html>
