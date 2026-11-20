@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3869c8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../images/icons/icon-192x192.png">
+    <title>Simulador de Examen - Psiquiatria</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+
+<body>
+    <dialog id="install-dialog" class="install-dialog" aria-labelledby="install-title"
+        aria-describedby="install-description">
+        <div class="install-content">
+            <p class="install-love"><strong><em>Hola preciosa, espero te sirva. Te amo</em></strong></p>
+            <h2 id="install-title">Descarga la aplicación</h2>
+            <p id="install-description" class="install-description">
+                Instala la aplicación para abrir tus cuestionarios y usarlos sin conexión.
+            </p>
+            <div class="install-actions">
+                <button id="install-app-button" type="button">Descargar aplicación</button>
+                <button id="install-close-button" class="install-close" type="button">Ahora no</button>
+            </div>
+        </div>
+    </dialog>
+
+    <div class="container">
+        <a class="btn btn-outline-primary home-button" href="../index.html">
+            <span>
+                < Volver al inicio</span>
+        </a>
+
+        <div class="offline-actions">
+            <button id="offline-toggle" class="btn btn-outline-primary" type="button"
+                data-offline-url="../Cuestionarios/Psiquiatria9_3.html" disabled>
+                Preparar para usar sin conexión
+            </button>
+            <p id="offline-status" class="offline-status" role="status" aria-live="polite">
+                Comprobando el acceso sin conexión...
+            </p>
+        </div>
+
+        <div class="text-center mb-3">
+            <h2 class="fw-bold text-primary">Simulador</h2>
+            <p class="text-muted">Pon a prueba tus conocimientos paso a paso</p>
+        </div>
+
+        <!-- Controles para seleccionar modalidad -->
+        <div class="mode-selector">
+            <button id="mode-questions-btn" class="btn btn-primary btn-mode"
+                onclick="cambiarModo('preguntas')">Preguntas Directas</button>
+            <button id="mode-cases-btn" class="btn btn-outline-primary btn-mode" onclick="cambiarModo('casos')">Casos
+                Clínicos</button>
+        </div>
+
+        <div class="card-quiz">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span id="question-counter" class="badge bg-secondary">Pregunta 1 de X</span>
+                <span id="score-counter" class="badge bg-success">Aciertos: 0</span>
+            </div>
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+
+            <!-- Caja para la descripción del caso clínico (Oculta por defecto) -->
+            <div id="case-container" class="case-card d-none">
+                <h5 class="fw-bold mb-2">📌 Caso Clínico:</h5>
+                <p id="case-description"></p>
+            </div>
+
+            <div id="quiz-container">
+                <h4 id="question-text" class="fw-bold mb-4 text-dark">Cargando pregunta...</h4>
+
+                <div class="options-grid mb-4" id="options-container">
+                </div>
+            </div>
+
+            <div id="feedback-container" class="alert d-none mt-3">
+                <h5 id="feedback-title" class="fw-bold mb-1"></h5>
+                <p id="feedback-text"></p>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                <button id="next-btn" class="btn btn-primary btn-lg d-none">Siguiente Pregunta</button>
+            </div>
+
+        </div>
+
+        <div id="results-card" class="card-quiz text-center d-none mt-4">
+            <h3 class="fw-bold text-success mb-3">¡Simulador Finalizado!</h3>
+            <p class="mb-2">Has completado todas las preguntas.</p>
+            <h4 id="final-score" class="fw-bold text-primary mb-4"></h4>
+            <button onclick="reiniciarQuiz()" class="btn btn-outline-primary btn-lg">Volver a Intentar</button>
+        </div>
+    </div>
+
+    <script>
+
+
+        const mockPreguntas = [
+            {
+                "pregunta": "1. ¿Cuál de los siguientes psicofármacos es considerado el estándar de oro en el tratamiento del Trastorno Bipolar por contar con evidencia irrefutable en la reducción del riesgo de suicidio?",
+                "opA": "Valproato de magnesio",
+                "opB": "Carbonato de Litio",
+                "opC": "Lamotrigina",
+                "opD": "Carbamazepina",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Carbonato de Litio es el estándar de oro en el Trastorno Bipolar y el único estabilizador del ánimo con evidencia irrefutable para la reducción del riesgo de suicidio y prevención de manía aguda (Fuente: PSIQUIATRÍA.pdf, Sección Estabilizadores del Ánimo / Litio)."
+            },
+            {
+                "pregunta": "2. Un paciente en tratamiento con Carbonato de Litio presenta ataxia, disartria y temblor grosero. Al medir litemia se detecta un nivel plasmático > 1.8 mEq/L. ¿Cuál es el diagnóstico clínico primario?",
+                "opA": "Síndrome Neuroléptico Maligno",
+                "opB": "Toxicidad aguda por Litio",
+                "opC": "Síndrome serotoninérgico",
+                "opD": "Efecto extrapiramidal agudo",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Niveles plasmáticos de litio por encima de 1.8 mEq/L son tóxicos y se manifiestan característicamente con ataxia, alteraciones neurológicas y deterioro de función renal (Fuente: PSIQUIATRÍA.pdf, Sección Litio)."
+            },
+            {
+                "pregunta": "3. Al iniciar tratamiento con Lamotrigina para la prevención de episodios depresivos en el Trastorno Bipolar, ¿cuál es la razón médica fundamental para realizar un escalamiento de dosis extremadamente lento?",
+                "opA": "Prevenir la hiponatremia dilucional severa",
+                "opB": "Evitar la inducción de agranulocitosis",
+                "opC": "Prevenir el Síndrome de Stevens-Johnson",
+                "opD": "Evitar nefrotoxicidad aguda por precipitación de cristales",
+                "respuestaCorrecta": "opC",
+                "explicacion": "La Lamotrigina requiere un escalamiento de dosis gradual y muy lento para prevenir el desarrollo del Síndrome de Stevens-Johnson, una reacción dermatológica grave y potencialmente letal (Fuente: PSIQUIATRÍA.pdf, Sección Lamotrigina)."
+            },
+            {
+                "pregunta": "4. El uso de Ácido Valproico / Valproato está contraindicado de forma absoluta en mujeres en edad fértil sin anticoncepción estricta debido a su elevado riesgo teratogénico. ¿Qué malformación congénita específica presenta mayor riesgo?",
+                "opA": "Anomalía de Ebstein",
+                "opB": "Defectos del tubo neural (como espina bífida)",
+                "opC": "Agenesia renal bilateral",
+                "opD": "Fisura palatina aislada",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Valproato se asocia fuertemente a teratogenicidad por defectos del tubo neural (espina bífida, anencefalia), por lo que requiere anticoncepción estricta en mujeres en edad fértil (Fuente: PSIQUIATRÍA.pdf, Sección Valproato)."
+            },
+            {
+                "pregunta": "5. ¿Cuál es el riesgo metabólico característico que requiere monitoreo frecuente de electrolitos séricos en pacientes tratados con Oxcarbazepina o Carbamazepina?",
+                "opA": "Hipercalcemia grave",
+                "opB": "Hiponatremia dilucional",
+                "opC": "Hiperpotasemia refractaria",
+                "opD": "Hipoglucemia sintomática",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La Carbamazepina y Oxcarbazepina bloquean canales de sodio dependientes de voltaje y producen como riesgo característico la hiponatremia dilucional (Fuente: PSIQUIATRÍA.pdf, Sección Carbamazepina/Oxcarbazepina)."
+            },
+            {
+                "pregunta": "6. De acuerdo con los criterios diagnósticos del Trastorno Obsesivo-Compulsivo (TOC), ¿cuál es el criterio temporal mínimo diario de interferencia o consumo de tiempo para considerar significación clínica?",
+                "opA": "Consumo de más de 15 minutos al día",
+                "opB": "Consumo de más de 30 minutos al día",
+                "opC": "Consumo de más de 1 hora al día",
+                "opD": "Consumo continuado durante 24 horas ininterrumpidas",
+                "respuestaCorrecta": "opC",
+                "explicacion": "El TOC requiere que las obsesiones o compulsiones consuman más de 1 hora al día o generen un deterioro clínico significativo en las áreas social, laboral o académica (Fuente: PSIQUIATRÍA.pdf, Sección TOC Criterios)."
+            },
+            {
+                "pregunta": "7. En la neurobiología del Trastorno Obsesivo-Compulsivo (TOC), ¿qué circuito cerebral se encuentra hiperactivo debido a una falla en los mecanismos de freno fronto-estriatales?",
+                "opA": "Circuito Tálamo-Amigdalino",
+                "opB": "Circuito CSTC (Corteza-Estriado-Tálamo-Corteza)",
+                "opC": "Circuito Mesolímbico Dopaminérgico",
+                "opD": "Vía Nigroestriada",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el TOC existe una disfunción con hiperactividad en el bucle fronto-estriatal del circuito Corteza-Estriado-Tálamo-Corteza (CSTC), donde la corteza orbitofrontal y el núcleo caudado no logran 'frenar' la señal de alarma (Fuente: PSIQUIATRÍA.pdf, Sección Fisiopatología TOC)."
+            },
+            {
+                "pregunta": "8. Un paciente pediátrico presenta un inicio brusco y severo de síntomas obsesivo-compulsivos tras una infección faríngea por Estreptococo del grupo A. ¿Qué entidad clínica se debe sospechar?",
+                "opA": "Síndrome de Gilles de la Tourette",
+                "opB": "Síndrome PANDAS / PANS",
+                "opC": "Encefalopatía herpética",
+                "opD": "Trastorno del Espectro Autista regresivo",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Síndrome PANDAS/PANS corresponde a la aparición brusca de TOC en pediatría desencadenada por una respuesta autoinmune post-infección por estreptococo del grupo A (Fuente: PSIQUIATRÍA.pdf, Sección Etiología TOC)."
+            },
+            {
+                "pregunta": "9. ¿Cuál es el tratamiento psicoterapéutico de primera línea y estándar de oro demostrado para el Trastorno Obsesivo-Compulsivo (TOC)?",
+                "opA": "Terapia Psicoanalítica Tradicional",
+                "opB": "Terapia Cognitivo-Conductual con Exposición y Prevención de Respuesta (EPR)",
+                "opC": "Terapia Sistémica Familiar",
+                "opD": "Terapia Gestalt",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La TCC con Exposición y Prevención de Respuesta (EPR) es la psicoterapia de primera elección y estándar de oro para el TOC (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TOC)."
+            },
+            {
+                "pregunta": "10. ¿Qué grupo farmacológico constituye la primera elección de tratamiento biológico en el Trastorno Obsesivo-Compulsivo?",
+                "opA": "Benzodiazepinas de alta potencia",
+                "opB": "Inhibidores Selectivos de la Recaptación de Serotonina (ISRS)",
+                "opC": "Antipsicóticos típicos a dosis altas",
+                "opD": "Estabilizadores del ánimo tipo Litio",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Los Inhibidores Selectivos de la Recaptación de Serotonina (ISRS) a dosis elevadas son los psicofármacos de primera línea en el tratamiento del TOC (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TOC)."
+            },
+            {
+                "pregunta": "11. ¿Qué antidepresivo tricíclico es reconocido como el fármaco serotoninérgico no selectivo más potente para el TOC, utilizado habitualmente como segunda línea farmacológica?",
+                "opA": "Amitriptilina",
+                "opB": "Imipramina",
+                "opC": "Clomipramina",
+                "opD": "Nortriptilina",
+                "respuestaCorrecta": "opC",
+                "explicacion": "La Clomipramina es el antidepresivo tricíclico más potente con especificidad serotoninérgica indicado en el TOC tras fallo a ISRS (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento Farmacológico TOC)."
+            },
+            {
+                "pregunta": "12. Cuando un paciente con TOC presenta respuesta parcial tras 12 semanas a dosis máximas de ISRS, ¿cuál es la estrategia farmacológica de potenciación de primera opción?",
+                "opA": "Agregar un segundo ISRS a dosis medias",
+                "opB": "Agregar un antipsicótico atípico a dosis bajas (ej. Aripiprazol o Risperidona)",
+                "opC": "Agregar una benzodiazepina de larga vida media",
+                "opD": "Suspender ISRS e iniciar terapia electroconvulsiva inmediatamente",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Ante respuesta parcial a dosis máxima de ISRS por 12 semanas en TOC, se indica potenciación adicionando un antipsicótico atípico a dosis baja como Aripiprazol o Risperidona (Fuente: PSIQUIATRÍA.pdf, Sección TOC Resistente)."
+            },
+            {
+                "pregunta": "13. En el Trastorno por Excoriación (pellizcado cutáneo), ¿cómo se diferencia el comportamiento de tipo 'automático' del de tipo 'enfocado'?",
+                "opA": "El automático ocurre bajo anestesia; el enfocado ocurre despierto",
+                "opB": "El automático se realiza sin conciencia mientras la persona realiza otra actividad; el enfocado implica examen deliberado en el espejo",
+                "opC": "El automático es exclusivo de niños; el enfocado es exclusivo de adultos",
+                "opD": "El automático causa dolor físico; el enfocado es indoloro",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el trastorno por excoriación, el comportamiento automático se realiza sin darse cuenta mientras se ve televisión o estudia, mientras que el enfocado implica búsqueda deliberada de imperfecciones en el espejo (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos Relacionados con el TOC)."
+            },
+            {
+                "pregunta": "14. En el modelo estructural del psicoanálisis, ¿cuál es la instancia psíquica primitiva que se rige exclusivamente por el principio del placer?",
+                "opA": "El Yo (Ego)",
+                "opB": "El Superyó (Superego)",
+                "opC": "El Ello (Id)",
+                "opD": "El Ideal del Yo",
+                "respuestaCorrecta": "opC",
+                "explicacion": "El Ello representa la instancia psíquica primitiva e inconsciente guiada por el principio del placer que busca la descarga inmediata de impulsos (Fuente: PSIQUIATRÍA.pdf, Sección Estructura Psíquica)."
+            },
+            {
+                "pregunta": "15. ¿A qué edad aproximada se desarrolla el Yo (Ego) y bajo qué principio organizador opera para mediar entre los impulsos internos y el mundo exterior?",
+                "opA": "Nacimiento; Principio de placer",
+                "opB": "Entre los 2-3 a 5 años; Principio de realidad",
+                "opC": "A los 12 años; Principio de perfección",
+                "opD": "En la adultez tardía; Principio de sublimación",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Yo se desarrolla entre los 2-3 y 5 años de edad y actúa bajo el principio de realidad mediando entre el Ello, el Superyó y el entorno (Fuente: PSIQUIATRÍA.pdf, Sección Estructura Psíquica / Funciones del Yo)."
+            },
+            {
+                "pregunta": "16. El Superyó se divide en dos componentes fundamentales que castigan o premian al individuo. ¿Cuáles son estos dos componentes?",
+                "opA": "Ello pulsional y Ello defensivo",
+                "opB": "La Conciencia Moral y el Ideal del Yo",
+                "opC": "Prueba de realidad y Juicio",
+                "opD": "Temperamento y Carácter",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Superyó integra la Conciencia Moral (que castiga con culpa al actuar mal) y el Ideal del Yo (que premia con orgullo al cumplir valores morales) (Fuente: PSIQUIATRÍA.pdf, Sección Estructura Psíquica)."
+            },
+            {
+                "pregunta": "17. Dentro de las 12 Funciones del Yo, un paciente que no puede diferenciar entre sus alucinaciones auditivas e imaginería mental interna presenta una alteración en la función de:",
+                "opA": "Juicio",
+                "opB": "Prueba de realidad",
+                "opC": "Autonomía",
+                "opD": "Síntesis-integración",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La prueba de realidad es la función del Yo que evalúa la capacidad de diferenciar entre la realidad objetiva externa e imaginería/fantasía interna. Su nivel bajo (1) se expresa con alucinaciones (Fuente: PSIQUIATRÍA.pdf, Tabla 12 Funciones del Yo)."
+            },
+            {
+                "pregunta": "18. Un paciente que refiere sentirse ajeno a su propio cuerpo y experimenta episodios severos de despersonalización presenta un compromiso en cuál de las funciones del Yo:",
+                "opA": "Sentido de sí (identidad estable)",
+                "opB": "Barrera de estímulo",
+                "opC": "Regresión adaptativa",
+                "opD": "Relaciones objetales",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El 'Sentido de sí' garantiza una identidad estable y la percepción continua de uno mismo; niveles bajos se manifiestan con despersonalización y desrealización (Fuente: PSIQUIATRÍA.pdf, Tabla 12 Funciones del Yo)."
+            },
+            {
+                "pregunta": "19. Un paciente con Trastorno Límite de la Personalidad percibe a su psiquiatra como 'el mejor del mundo' un día y como 'una persona malvada y sin empatía' al día siguiente. ¿Qué mecanismo de defensa inmaduro describe este patrón?",
+                "opA": "Sublimación",
+                "opB": "Formación reactiva",
+                "opC": "Escisión (Splitting)",
+                "opD": "Racionalización",
+                "respuestaCorrecta": "opC",
+                "explicacion": "La Escisión o Splitting es un mecanismo inmaduro que compartimenta las experiencias dividiendo a las personas o a sí mismo en totalmente buenas o totalmente malas (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa Inmaduros)."
+            },
+            {
+                "pregunta": "20. ¿Qué mecanismo de defensa inmaduro/narcisista consiste en atribuir a otras personas los propios pensamientos, sentimientos o impulsos inaceptables?",
+                "opA": "Somatización",
+                "opB": "Proyección",
+                "opC": "Desplazamiento",
+                "opD": "Aislamiento del afecto",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La Proyección atribuye a otros los pensamientos o deseos inaceptables propios para proteger a la mente de la ansiedad (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa)."
+            },
+            {
+                "pregunta": "21. Expresar impulsos inconscientes directamente mediante el comportamiento impulsivo o violento para evitar experimentar dolor o ansiedad corresponde al mecanismo de:",
+                "opA": "Conducta impulsiva (Acting out)",
+                "opB": "Supresión",
+                "opC": "Sublimación",
+                "opD": "Formación reactiva",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El Acting out o conducta impulsiva es un mecanismo inmaduro donde se expresan impulsos inconscientes mediante acciones directas para evadir el dolor afectivo (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos Inmaduros)."
+            },
+            {
+                "pregunta": "22. Un individuo que siente un rechazo intenso e inconsciente hacia un familiar se comporta de manera excesivamente afectuosa y servicial con él. ¿Qué mecanismo de defensa neurótico opera aquí?",
+                "opA": "Sublimación",
+                "opB": "Formación reactiva",
+                "opC": "Desplazamiento",
+                "opD": "Negación",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La Formación reactiva transforma un impulso inaceptable en su opuesto directo en la conducta consciente (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos Neuróticos)."
+            },
+            {
+                "pregunta": "23. ¿Cuál de los siguientes es considerado un mecanismo de defensa MADURO y adaptativo?",
+                "opA": "Proyección",
+                "opB": "Escisión",
+                "opC": "Sublimación",
+                "opD": "Somatización",
+                "respuestaCorrecta": "opC",
+                "explicacion": "La sublimación es un mecanismo maduro mediante el cual los impulsos inaceptables se canalizan hacia actividades constructivas y socialmente aceptadas (arte, deporte, ciencia) (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos Maduros)."
+            },
+            {
+                "pregunta": "24. ¿Cuál es la diferencia fundamental entre el mecanismo de Represión y el de Supresión?",
+                "opA": "La represión es consciente y la supresión es inconsciente",
+                "opB": "La represión es inconsciente y la supresión es un aplazamiento consciente o casi consciente",
+                "opC": "La represión solo ocurre en psicosis y la supresión en neurosis",
+                "opD": "No existe diferencia, son sinónimos exactos",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La represión expulsa pensamientos de forma inconsciente, mientras que la supresión implica posponer deliberadamente (consciente o casi consciente) la atención a un conflicto (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa)."
+            },
+            {
+                "pregunta": "25. En la estructura de la personalidad, ¿cómo se define el Temperamento a diferencia del Carácter?",
+                "opA": "El temperamento es totalmente aprendido durante la adultez",
+                "opB": "El temperamento es la disposición biológica e instintiva básica con la que se reacciona al entorno",
+                "opC": "El carácter está determinado genéticamente y no cambia",
+                "opD": "El temperamento es el juicio moral del Superyó",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El temperamento es la disposición biológica básica e instintiva con la que reaccionamos, mientras que el carácter agrupa hábitos, valores y aprendizajes normativos (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de la Personalidad)."
+            },
+            {
+                "pregunta": "26. ¿Qué trastornos de la personalidad se agrupan en el Cluster o Grupo A según la clasificación psiquiátrica ( DSM )?",
+                "opA": "Antisocial, Límite, Histriónico, Narcisista",
+                "opB": "Por Evitación, Por Dependencia, Obsesivo-Compulsivo",
+                "opC": "Paranoide, Esquizoide, Esquizotípico",
+                "opD": "Depresivo, Ansioso, Esquizoafectivo",
+                "respuestaCorrecta": "opC",
+                "explicacion": "El Grupo A comprende las personalidades raras o excéntricas: Paranoide, Esquizoide y Esquizotípica (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de la Personalidad Grupo A)."
+            },
+            {
+                "pregunta": "27. Un punto clave de diagnóstico diferencial entre el Trastorno de la Personalidad Esquizoide y el Trastorno de la Personalidad por Evitación es:",
+                "opA": "El esquizoide desea profundamente socializar pero teme el rechazo, mientras que el evitativo no tiene interés",
+                "opB": "El esquizoide presenta desapego voluntario sin deseo de relaciones, mientras que el evitativo desea intensamente el contacto pero se aísla por temor paralizante al rechazo",
+                "opC": "El esquizoide tiene alucinaciones continuas y el evitativo no",
+                "opD": "El evitativo pertenece al Grupo A y el esquizoide al Grupo C",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Clave clínica: El paciente con personalidad por evitación *desea* tener relaciones pero el miedo al rechazo lo aísla; el esquizoide experimenta indiferencia y desapego social sin deseo de vinculación (Fuente: PSIQUIATRÍA.pdf, Sección Grupo A y Grupo C)."
+            },
+            {
+                "pregunta": "28. Un paciente masculino acude vistiendo ropas excéntricas, afirma poseer 'telepatía' para predecir eventos y sostiene pensamiento mágico sin llegar a la estructuración delirante franca. ¿Qué trastorno de personalidad presenta?",
+                "opA": "Trastorno Paranoide",
+                "opB": "Trastorno Esquizotípico",
+                "opC": "Trastorno Histriónico",
+                "opD": "Trastorno Obsesivo-Compulsivo",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Trastorno Esquizotípico de la personalidad se caracteriza por distorsiones cognitivas/perceptivas, comportamiento excéntrico, pensamiento mágico e ideas de referencia (Fuente: PSIQUIATRÍA.pdf, Sección Grupo A)."
+            },
+            {
+                "pregunta": "29. Para establecer el diagnóstico de Trastorno de la Personalidad Antisocial, ¿cuál es un requisito característico de la historia del desarrollo previo al diagnóstico adulto?",
+                "opA": "Antecedentes de depresión mayor recurrente en la infancia",
+                "opB": "Evidencia de Trastorno de la Conducta (disocial) antes de los 15 años de edad",
+                "opC": "Presencia de tics fónicos múltiples en la niñez",
+                "opD": "Historia de fobia social severa escolar",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El trastorno de personalidad antisocial requiere un patrón persistente de inobservancia y violación de derechos ajenos con evidencia de trastorno de la conducta antes de los 15 años (Fuente: PSIQUIATRÍA.pdf y DSM-5/CIE-11)."
+            },
+            {
+                "pregunta": "30. La inestabilidad en el afecto, la autoimagen, las relaciones interpersonales y la marcada impulsividad con automutilación o gestos suicidas son características nucleares de:",
+                "opA": "Trastorno de la Personalidad Límite (Borderline)",
+                "opB": "Trastorno Esquizoide",
+                "opC": "Trastorno de la Personalidad por Dependencia",
+                "opD": "Trastorno Anancástico",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El Trastorno Límite de la Personalidad (Grupo B) se define por inestabilidad emocional, impulsividad, miedo al abandono y alternancia en la valoración interpersonal (Fuente: PSIQUIATRÍA.pdf, Sección Grupo B)."
+            },
+            {
+                "pregunta": "31. ¿Qué trastorno de la personalidad se distingue por un patrón dominante de emotividad excesiva y una búsqueda incesante de ser el centro de atención?",
+                "opA": "Trastorno Narcisista",
+                "opB": "Trastorno Histriónico",
+                "opC": "Trastorno Paranoide",
+                "opD": "Trastorno por Evitación",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El trastorno de la personalidad histriónica (Grupo B) cursa con búsqueda constante de atención, seducción inapropiada y dramatización afectiva (Fuente: PSIQUIATRÍA.pdf, Sección Grupo B)."
+            },
+            {
+                "pregunta": "32. Un paciente exige trato preferencial en la consulta, expresa fantasías de éxito ilimitado y muestra incapacidad para empatizar con los problemas de los demás. Corresponde al trastorno:",
+                "opA": "Esquizoide",
+                "opB": "Narcisista de la personalidad",
+                "opC": "Antisocial",
+                "opD": "Evitativo",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El trastorno de la personalidad narcisista cursa con patrón de grandiosidad, necesidad de admiración y falta de empatía (Fuente: PSIQUIATRÍA.pdf, Sección Grupo B)."
+            },
+            {
+                "pregunta": "33. Un paciente adulto es incapaz de tomar decisiones cotidianas sin reafirmación excesiva de otros y permite que sus padres elijan su trabajo y residencia por temor a la separación. Corresponde al trastorno de la personalidad:",
+                "opA": "Por Dependencia",
+                "opB": "Paranoide",
+                "opC": "Esquizotípico",
+                "opD": "Histriónico",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El Trastorno de la Personalidad por Dependencia (Grupo C) se caracteriza por necesidad dominante y excesiva de cuidado, conducta sumisa y parálisis decisional (Fuente: PSIQUIATRÍA.pdf, Sección Grupo C)."
+            },
+            {
+                "pregunta": "34. ¿Cuál es una diferencia clínica clave entre el TOC (Trastorno Obsesivo-Compulsivo) y el TPOC (Trastorno de la Personalidad Obsesivo-Compulsiva)?",
+                "opA": "El TOC es egosintónico y el TPOC es egodistónico",
+                "opB": "El TOC presenta obsesiones y compulsiones intrusivas egodistónicas, mientras que el TPOC es un patrón egosintónico generalizado de perfeccionismo y control",
+                "opC": "El TPOC responde únicamente a TEC y el TOC no",
+                "opD": "El TOC es exclusivo del Grupo A de la personalidad",
+                "respuestaCorrecta": "opB",
+                "explicacion": "En el TOC los síntomas son egodistónicos (el paciente los sufre como intrusivos e indeseados), mientras que en el TPOC los rasgos de perfeccionismo y orden son egosintónicos (percibidos como correctos y deseables) (Fuente: PSIQUIATRÍA.pdf, Sección TPOC / TOC)."
+            },
+            {
+                "pregunta": "35. En el Trastorno de la Personalidad Obsesivo-Compulsiva, la adicción al trabajo ('workaholism') se caracteriza por:",
+                "opA": "Dedicación excesiva al trabajo excluyendo ocio y amistades, sin que exista una necesidad económica evidente",
+                "opB": "Trabajar únicamente bajo presión de deudas financieras graves",
+                "opC": "Incapacidad total para concentrarse en tareas laborales",
+                "opD": "Ausencia completa de perfeccionismo en el entorno laboral",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El 'workaholism' en el TPOC implica devoción excesiva al trabajo y productividad con exclusión de actividades recreativas y sociales, sin justificación financiera (Fuente: PSIQUIATRÍA.pdf, Sección TPOC)."
+            },
+            {
+                "pregunta": "36. ¿Cuáles son los 2 dominios clínicos principales que definen el diagnóstico de Trastorno del Espectro Autista (TEA) según los criterios actuales?",
+                "opA": "Alucinaciones auditivas y delirios de persecución",
+                "opB": "Deficiencias en la comunicación e interacción social; y Patrones restrictivos y repetitivos de conducta/intereses",
+                "opC": "Déficit de atención e hiperactividad motora pura",
+                "opD": "Inestabilidad afectiva e impulsividad severa",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El TEA se caracteriza clínicamente por dos dominios nucleares: 1) déficits en comunicación e interacción social, y 2) patrones restrictivos, repetitivos e inflexibles de conducta e intereses (Fuente: PSIQUIATRÍA.pdf, Sección TEA)."
+            },
+            {
+                "pregunta": "37. Un niño con TEA repite mecánicamente frases que acaba de escuchar a un tercero y realiza aleteo constante de manos ante la emoción. Estos síntomas corresponden a:",
+                "opA": "Pensamiento mágico del Grupo A",
+                "opB": "Movimientos y habla estereotipados / repetitivos (ecolalia y estereotipias motoras)",
+                "opC": "Crisis convulsivas focales motoras",
+                "opD": "Conductas compulsivas egodistónicas del TOC",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La ecolalia (repetición de palabras escuchadas) y las estereotipias motoras (aleteo de manos) son manifestaciones del dominio de conductas repetitivas del TEA (Fuente: PSIQUIATRÍA.pdf, Sección TEA)."
+            },
+            {
+                "pregunta": "38. Un paciente diagnosticado con Trastorno del Espectro Autista requiere 'apoyo muy sustancial' debido a déficits severos en habilidades de comunicación verbal y no verbal. ¿En qué nivel de severidad del TEA se clasifica?",
+                "opA": "Nivel 1",
+                "opB": "Nivel 2",
+                "opC": "Nivel 3",
+                "opD": "Nivel 4",
+                "respuestaCorrecta": "opC",
+                "explicacion": "El Nivel 3 de TEA se define por requerir 'apoyo muy sustancial' debido a déficits severos en la comunicación y extrema inflexibilidad conductual (Fuente: PSIQUIATRÍA.pdf, Sección Niveles de TEA)."
+            },
+            {
+                "pregunta": "39. ¿Qué caracteriza al Nivel 1 de severidad en el Trastorno del Espectro Autista?",
+                "opA": "Ausencia total de lenguaje expresivo",
+                "opB": "Requerir apoyo (dificultad para iniciar interacciones sociales y problemas de organización/planificación)",
+                "opC": "Requerir apoyo muy sustancial con mutismo catatónico",
+                "opD": "Desarrollo normal de todas las funciones ejecutivas sin necesidad de apoyo",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Nivel 1 de TEA requiere 'apoyo' y se manifiesta por dificultad para iniciar interacciones sociales, problemas de planificación y poca independencia (Fuente: PSIQUIATRÍA.pdf, Sección Niveles de TEA)."
+            },
+            {
+                "pregunta": "40. ¿Existe actualmente algún tratamiento farmacológico aprobado para revertir los síntomas primarios (core) de comunicación y rigidez en el Trastorno del Espectro Autista?",
+                "opA": "Sí, estimulantes del SNC como el Metilfenidato",
+                "opB": "No existe tratamiento farmacológico para los síntomas core del TEA",
+                "opC": "Sí, antipsicóticos típicos como el Haloperidol",
+                "opD": "Sí, dosis altas de Litio",
+                "respuestaCorrecta": "opB",
+                "explicacion": "No existe ningún tratamiento farmacológico para los síntomas primarios/core del TEA; el abordaje principal son las intervenciones psicosociales y conductuales (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TEA)."
+            },
+            {
+                "pregunta": "41. ¿Qué psicofármacos antipsicóticos de segunda generación están formalmente aprobados para el manejo sintomático de la irritabilidad, agresión y autoagresión severa en el TEA?",
+                "opA": "Clozapina y Olanzapina",
+                "opB": "Risperidona y Aripiprazol",
+                "opC": "Haloperidol y Clorpromazina",
+                "opD": "Quetiapina y Ziprasidona",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La Risperidona y el Aripiprazol son antipsicóticos atípicos indicados y aprobados para controlar la irritabilidad y conductas agresivas graves asociadas al TEA (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento Farmacológico TEA)."
+            },
+            {
+                "pregunta": "42. ¿Cuál es la intervención psicosocial y conductual de primera línea más ampliamente validada para el desarrollo de habilidades comunicativas y adaptativas en niños con TEA?",
+                "opA": "Análisis Conductual Aplicado (ABA)",
+                "opB": "Terapia Electroconvulsiva",
+                "opC": "Psicoanálisis Lacaniano",
+                "opD": "Terapia de Aceptación y Compromiso aislada",
+                "respuestaCorrecta": "opA",
+                "explicacion": "El Análisis Conductual Aplicado (ABA) es la intervención psicosocial de primera línea para desarrollar habilidades sociales, de lenguaje y comunicación en el TEA (Fuente: PSIQUIATRÍA.pdf, Sección Intervenciones Psicosociales TEA)."
+            },
+            {
+                "pregunta": "43. Entre los factores de riesgo asociados a un incremento en la probabilidad de presentar Trastorno del Espectro Autista se incluyen los siguientes, EXCEPTO:",
+                "opA": "Tener hermanos con diagnóstico de TEA",
+                "opB": "Edad paterna o materna avanzada",
+                "opC": "Síndrome del Cromosoma X Frágil o Síndrome de Down",
+                "opD": "Vacunación infantil triple vírica (SRP)",
+                "respuestaCorrecta": "opD",
+                "explicacion": "Los factores de riesgo biológicos/genéticos incluyen edad paterna avanzada, hermanos con TEA y condiciones como X frágil o Síndrome de Down; la asociación con vacunas ha sido ampliamente desmentida por la evidencia médica (Fuente: PSIQUIATRÍA.pdf, Sección Etiología TEA y literatura científica)."
+            },
+            {
+                "pregunta": "44. En la psicopatología de la Esquizofrenia, los síntomas negativos (como abulia, anhedonia y aplanamiento afectivo) se vinculan neurobiológicamente a:",
+                "opA": "Hiperactividad dopaminérgica en la vía mesolímbica",
+                "opB": "Hipofunción dopaminérgica en la vía mesocortical",
+                "opC": "Bloqueo completo de receptores muscarínicos en el estriado",
+                "opD": "Aumento de serotonina en la vía nigroestriada",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Los síntomas negativos y cognitivos de la esquizofrenia se asocian a hipofunción dopaminérgica en la corteza prefrontal / vía mesocortical, a diferencia de los síntomas positivos asociados a hiperactividad mesolímbica (Fuente: Literatura psiquiátrica clínica / DSM-5)."
+            },
+            {
+                "pregunta": "45. ¿El bloqueo de receptores D2 en qué vía dopaminérgica cerebral es responsable directo de la aparición de Síntomas Extrapiramidales (SEP) y Disquinesia Tardía?",
+                "opA": "Vía Mesolímbica",
+                "opB": "Vía Mesocortical",
+                "opC": "Vía Nigroestriada",
+                "opD": "Vía Tuberoinfundibular",
+                "respuestaCorrecta": "opC",
+                "explicacion": "El antagonismo D2 en la vía nigroestriada por antipsicóticos (especialmente típicos de alta potencia) desencadena efectos extrapiramidales y parkinsonismo secundario (Fuente: Literatura psiquiátrica / Farmacología)."
+            },
+            {
+                "pregunta": "46. La Clozapina es el antipsicótico atípico más eficaz para la esquizofrenia resistente al tratamiento. ¿Cuál es su riesgo hematológico adverso más grave que exige monitoreo estricto de leucocitos y neutrófilos?",
+                "opA": "Trombocitopenia inmune",
+                "opB": "Agranulocitosis",
+                "opC": "Anemia aplásica refractaria",
+                "opD": "Policitemia vera",
+                "respuestaCorrecta": "opB",
+                "explicacion": "La Clozapina conlleva un riesgo potencialmente fatal de agranulocitosis (neutropenia severa < 500/mm3), requiriendo hemogramas seriados obligatorios (Fuente: Literatura médica / Guías psiquiátricas)."
+            },
+            {
+                "pregunta": "47. Un paciente psiquiátrico en tratamiento con Haloperidol desarrolla fiebre alta (>40°C), rigidez muscular en 'tubo de plomo', inestabilidad autonómica y elevación marcada de CPK. ¿Cuál es la sospecha diagnóstica y el tratamiento inmediato?",
+                "opA": "Síndrome Serotoninérgico; administrar Flumazenil",
+                "opB": "Síndrome Neuroléptico Maligno; suspender antipsicótico y dar soporte hidroelectrolítico / Dantroleno o Bromocriptina",
+                "opC": "Catatonia periódica; administrar Litio",
+                "opD": "Hipertermia maligna por anestésicos; dar Naloxona",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Síndrome Neuroléptico Maligno es una urgencia psiquiátrica por hipodopaminergia severa caracterizada por hipertermia, rigidez muscular extrema, labilidad autonómica y CPK elevada; requiere suspensión del neuroléptico y medidas de soporte con Dantroleno/Bromocriptina (Fuente: Guías de Urgencias Psiquiátricas)."
+            },
+            {
+                "pregunta": "48. De acuerdo con los criterios del DSM-5/CIE-11 para el Trastorno Depresivo Mayor, para establecer el diagnóstico se requiere la presencia continua de al menos 5 síntomas durante mínimo 2 semanas, donde obligatoriamente al menos uno de los síntomas debe ser:",
+                "opA": "Insomnio o hipersomnia",
+                "opB": "Ánimo depresivo o Anhedonia (pérdida de interés/placer)",
+                "opC": "Ideas de culpa excesiva",
+                "opD": "Fatiga o pérdida de energía",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El diagnóstico de episodio depresivo mayor exige que al menos 1 de los 5 síntomas requeridos sea estado de ánimo depresivo o anhedonia (pérdida del interés/placer) durante 2 semanas (Fuente: DSM-5 / Manuales de Psiquiatría)."
+            },
+            {
+                "pregunta": "49. La combinación inadvertida de un ISRS con un IMAO o Tramadol puede desencadenar un Síndrome Serotoninérgico. ¿Cuál es la tríada clínica característica de esta entidad?",
+                "opA": "Hipotermia, bradicardia y parálisis flácida",
+                "opB": "Alteración del estado mental, hiperreactividad autonómica y neuromuscular (hiperreflexia/clonus)",
+                "opC": "Rash cutáneo exfoliativo, ictericia y oliguria",
+                "opD": "Alucinaciones visuales, alopecia y estreñimiento",
+                "respuestaCorrecta": "opB",
+                "explicacion": "El Síndrome Serotoninérgico se caracteriza por la tríada: 1) cambios en el estado mental (agitación, confusión), 2) hiperactividad autonómica (diaforesis, taquicardia, hipertermia) y 3) anomalías neuromusculares (clonus, hiperreflexia, temblor) (Fuente: Farmacología Clínica y Psiquiatría)."
+            },
+            {
+                "pregunta": "50. ¿Cuál es el tratamiento farmacológico de elección a largo plazo para la prevención de recaídas en el Trastorno de Pánico con o sin Agorafobia?",
+                "opA": "Benzodiazepinas de corta acción a demanda en monoterapia indefinida",
+                "opB": "Inhibidores Selectivos de la Recaptación de Serotonina (ISRS) o Duales (IRSN)",
+                "opC": "Antipsicóticos típicos de baja potencia",
+                "opD": "Estabilizadores del ánimo tipo Valproato",
+                "respuestaCorrecta": "opB",
+                "explicacion": "Los ISRS o IRSN son el tratamiento de elección a largo plazo en el Trastorno de Pánico para prevenir ataques de pánico y agorafobia, debiendo iniciarse a dosis bajas para evitar agitación inicial (Fuente: Guías de Práctica Clínica en Psiquiatría)."
+            }
+        ];
+
+
+
+        const mockCasos = [
+            {
+                "explicacionCaso": "Paciente masculino de 42 años con antecedente de Trastorno Bipolar Tipo I diagnosticado hace 8 años en tratamiento de mantenimiento con Carbonato de Litio (900 mg/día). Es traído a urgencias por su familiar tras 3 días de cuadro infeccioso gastrointestinal caracterizado por vómitos repetidos y diarrea acuosa, acompañado de ingesta hídrica deficiente. En el examen del estado mental se observa somnoliento, desorientado en tiempo y espacio, con disartria marcante, ataxia de la marcha y temblor grosero de extremidades superiores. Signos vitales: TA 105/65 mmHg, FC 98 lpm, Temp 36.8°C. Laboratorio: Litemia de 2.2 mEq/L, Creatinina sérica de 2.1 mg/dL, Sodio 131 mEq/L.",
+                "preguntas": [
+                    {
+                        "pregunta": "1. De acuerdo a la semiología psiquiátrica, los antecedentes y el nivel de litemia plasmática registrado (2.2 mEq/L), ¿cuál es la sospecha diagnóstica prioritaria?",
+                        "opA": "Episodio maníaco agudo con síntomas psicóticos",
+                        "opB": "Toxicidad aguda por Litio secundarias a deshidratación y depleción de sodio",
+                        "opC": "Síndrome Neuroléptico Maligno por psicofármacos",
+                        "opD": "Trastorno del delirium por encefalopatía hepática",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Litemias por encima de 1.5-2.0 mEq/L son francamente tóxicas. La deshidratación y la pérdida de sodio (por vómitos/diarrea) aumentan la reabsorción renal de litio, precipitando intoxicación caracterizada por disartria, ataxia, temblor grosero y alteración del sensorio (Fuente: PSIQUIATRÍA.pdf, Sección Litio y Toxicidad)."
+                    },
+                    {
+                        "pregunta": "2. ¿Cuál es la medida terapéutica prioritaria de emergencia a instaurar en este paciente?",
+                        "opA": "Aumentar la dosis de litio e iniciar haloperidol intramuscular",
+                        "opB": "Suspensión inmediata de litio, hidratación parenteral masiva con solución salina al 0.9% y considerar hemodiálisis si se mantiene > 2.5 mEq/L o con deterioro neurológico grave",
+                        "opC": "Administrar flumazenil intravenoso",
+                        "opD": "Iniciar ácido valproico a dosis de carga por vía oral",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El manejo de la toxicidad por litio exige descontinuación del fármaco, restitución volémica y salina activa para favorecer la excreción renal del ion, y hemodiálisis en casos severos o con litemias elevadas con compromiso neurológico (Fuente: PSIQUIATRÍA.pdf / Evidencia Clínica de Urgencias Psiquiátricas)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 29 años con Trastorno Bipolar Tipo II que inició tratamiento preventivo para episodios depresivos recurrentes con Lamotrigina. Por decisión propia, la paciente incrementó aceleradamente la dosis de 25 mg/día a 200 mg/día en el lapso de una semana. Acude a la consulta psiquiátrica de urgencia por presentar odinofagia, fiebre de 38.5°C, conjuntivitis bilateral y la aparición de un exantema maculopapular eritematoso con vesículas y desprendimiento epidérmico en cara, cuello y tórax anterior con compromiso de mucosas oral y genital.",
+                "preguntas": [
+                    {
+                        "pregunta": "3. ¿Cuál es la complicación dermatológica grave e infrecuente desencadenada por el escalamiento rápido de Lamotrigina descrita en el caso?",
+                        "opA": "Síndrome de Stevens-Johnson / Necrólisis Epidérmica Tóxica",
+                        "opB": "Psoriasis vulgar en placa",
+                        "opC": "Eritema nodoso secundario",
+                        "opD": "Acneiforme por anticonvulsivos",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "La Lamotrigina requiere una titulación lenta (escalonada cada 2 semanas) para prevenir el Síndrome de Stevens-Johnson / Necrólisis Epidérmica Tóxica, caracterizado por exantema bulloso, desprendimiento epidérmico y afección de mucosas (Fuente: PSIQUIATRÍA.pdf, Sección Lamotrigina)."
+                    },
+                    {
+                        "pregunta": "4. ¿Cuál debe ser la conducta médica inmediata e indiscutible ante este cuadro clínico?",
+                        "opA": "Reducir la dosis de Lamotrigina a la mitad y prescribir antihistamínicos orales",
+                        "opB": "Suspender inmediatamente la Lamotrigina y derivar de urgencia a una unidad de quemados/cuidados intensivos",
+                        "opC": "Agregar Ácido Valproico para neutralizar el exantema",
+                        "opD": "Mantener la dosis e iniciar prednisona oral ambulatoria",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Ante la sospecha de Síndrome de Stevens-Johnson por Lamotrigina, se exige la interrupción inmediata y definitiva del fármaco causante y la remisión urgente a centro hospitalario/cuidados intensivos (Fuente: PSIQUIATRÍA.pdf / Guías de Seguridad Farmacológica)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 35 años, contador público, acude a consulta acompañado por su esposa. Refiere que desde hace 3 años dedica entre 3 y 5 horas diarias a verificar repetidamente si las llaves del gas, las cerraduras de la casa y los enchufes eléctricos están apagados antes de salir. Afirma que le asaltan pensamientos intrusivos no deseados e incontrolables de que 'causará un incendio atroz y morirá su familia si no comprueba 15 veces consecutivas cada aparato'. Reconoce que sus temores son absurdos y excesivos (egosintónicos para el control, pero la compulsión es egodistónica), sufriendo marcado agotamiento y retrasos severos en su trabajo.",
+                "preguntas": [
+                    {
+                        "pregunta": "5. De acuerdo a los criterios diagnósticos del DSM-5/CIE-11, ¿cuál es el diagnóstico nosológico de este paciente?",
+                        "opA": "Trastorno de Ansiedad Generalizada (TAG)",
+                        "opB": "Trastorno Obsesivo-Compulsivo (TOC)",
+                        "opC": "Trastorno de la Personalidad Obsesivo-Compulsiva (TPOC)",
+                        "opD": "Trastorno Delirante de Tipo Somático",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El diagnóstico es TOC debido a la presencia de obsesiones (pensamientos intrusivos de incendios) y compulsiones (comprobación repetida 15 veces) que consumen > 1 hora diaria y generan deterioro funcional con introspección conservada (Fuente: PSIQUIATRÍA.pdf, Sección TOC)."
+                    },
+                    {
+                        "pregunta": "6. ¿Cuál es el tratamiento psicoterapéutico no farmacológico considerado Estándar de Oro para abordar las obsesiones y comprobaciones de este paciente?",
+                        "opA": "Terapia Psicoanalítica de Libre Asociación",
+                        "opB": "Terapia Cognitivo-Conductual centrada en Exposición con Prevención de Respuesta (EPR)",
+                        "opC": "Terapia Sistémica de Pareja",
+                        "opD": "Hipnosis Clínica Regresiva",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La Terapia Cognitivo-Conductual basada en Exposición y Prevención de Respuesta (EPR) es la psicoterapia de elección y estándar de oro evidenciado para el TOC (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TOC)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 40 años diagnosticada con TOC severo con compulsiones de limpieza. Ha recibido esquemas completos a dosis máximas recomendadas de Sertralina (200 mg/día) durante 14 semanas y posteriormente Fluoxetina (80 mg/día) durante 16 semanas, asociada a TCC con EPR, persistiendo con síntomas obsesivos graves que ocupan 6 horas al día sin mejoría clínica clínicamente significativa. No presenta antecedentes cardiológicos relevantes y su electrocardiograma (ECG) baseline es completamente normal.",
+                "preguntas": [
+                    {
+                        "pregunta": "7. Ante la falta de respuesta adecuada a dos ensayos de ISRS a dosis máximas en el TOC, ¿qué antidepresivo tricíclico con alta especificidad serotoninérgica está indicado como tratamiento farmacológico de segunda línea?",
+                        "opA": "Amitriptilina",
+                        "opB": "Desipramina",
+                        "opC": "Clomipramina",
+                        "opD": "Nortriptilina",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "La Clomipramina es el antidepresivo tricíclico serotoninérgico de segunda línea con mayor eficacia aprobada para casos de TOC resistentes a ISRS (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TOC / Clomipramina)."
+                    },
+                    {
+                        "pregunta": "8. ¿Qué estudio paraclínico previo es indispensable realizar antes de la prescripción e incremento de dosis de Clomipramina debido a sus efectos adversos quinídicos?",
+                        "opA": "Electroencefalograma de 24 horas",
+                        "opB": "Electrocardiograma (ECG) para evaluar intervalo QTc y conducción cardíaca",
+                        "opC": "Resonancia Magnética Cerebral con contraste",
+                        "opD": "Depuración de creatinina en orina de 24 horas",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Los antidepresivos tricíclicos como la Clomipramina pueden prolongar el intervalo QTc y alterar la conducción cardíaca por bloqueo de canales de sodio, haciendo imprescindible el monitoreo electrocardiográfico (Fuente: PSIQUIATRÍA.pdf / Evidencia Psicofarmacológica)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 23 años acude a urgencias tras realizarse cortes superficiales en ambos antebrazos (automutilación) luego de una discusión con su novio por temor a ser abandonada. Durante la entrevista, alaba fervientemente a la residente de guardia afirmando que es 'la mejor médica del hospital, comprensiva y perfecta', pero minutos después, cuando la médica le explica que debe aguardar unos minutos para el cierre de la herida, la paciente reacciona con cólera desmedida gritándole que es 'una profesional incompetente, perversa y sin corazón'.",
+                "preguntas": [
+                    {
+                        "pregunta": "9. En el análisis del funcionamiento psíquico, ¿qué mecanismo de defensa inmaduro/primitivo está utilizando marcadamente esta paciente?",
+                        "opA": "Sublimación",
+                        "opB": "Escisión (Splitting)",
+                        "opC": "Racionalización",
+                        "opD": "Intelectualización",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La escisión (splitting) es un mecanismo de defensa inmaduro típico del Trastorno Límite donde el individuo polariza las representaciones de los demás como completamente buenas (idealización) o completamente malas (devaluación) (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa / TLP)."
+                    },
+                    {
+                        "pregunta": "10. ¿Cuál es el trastorno de la personalidad subyacente que mejor sintetiza la inestabilidad afectiva, el miedo al abandono, las autolesiones y el uso de la escisión?",
+                        "opA": "Trastorno de la Personalidad Histriónica",
+                        "opB": "Trastorno de la Personalidad Límite (Borderline)",
+                        "opC": "Trastorno de la Personalidad Paranoide",
+                        "opD": "Trastorno de la Personalidad por Evitación",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno Límite de la Personalidad (Grupo B) cursa con inestabilidad en relaciones, autoimagen y afectos, impulsividad, automutilación y miedo al desamparo (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de Personalidad Grupo B)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un varón de 38 años, desempleado y solitario, es llevado a consulta por su hermana. Presenta vestir peculiar con varias capas de ropa desparejada e invernal en pleno verano. En la entrevista muestra lenguaje vago, metafórico y digresivo. Refiere estar convencido de que tiene un 'sexto sentido' y capacidad para influir en las luces de la calle con su mente (pensamiento mágico e ideas de referencia), sin presentar alucinaciones auditivas francas ni episodios delirantes continuos estructurados. Niega amigos íntimos fuera de sus familiares de primer grado.",
+                "preguntas": [
+                    {
+                        "pregunta": "11. ¿Cuál es el diagnóstico nosológico de la personalidad dentro del Grupo A que corresponde a este cuadro clínico?",
+                        "opA": "Trastorno de la Personalidad Esquizoide",
+                        "opB": "Trastorno de la Personalidad Esquizotípico",
+                        "opC": "Trastorno de la Personalidad Paranoide",
+                        "opD": "Esquizofrenia Paranoide residual",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno Esquizotípico (Grupo A) se distingue por déficits sociales, excéntricidad en la conducta, apariencia estrafalaria, pensamiento mágico y distorsiones cognitivas/perceptivas sin psicosis franca persistente (Fuente: PSIQUIATRÍA.pdf, Sección Grupo A)."
+                    },
+                    {
+                        "pregunta": "12. ¿En qué se diferencia principalmente la Personalidad Esquizotípica de la Personalidad Esquizoide?",
+                        "opA": "El esquizoide presenta pensamiento mágico y vestimenta estrafalaria; el esquizotípico solo aislamiento",
+                        "opB": "El esquizotípico presenta distorsiones cognitivas/perceptivas y pensamiento mágico; el esquizoide se caracteriza por aplanamiento afectivo y desinterés social sin distorsiones exóticas del pensamiento",
+                        "opC": "El esquizotípico es altamente sociable y comunicativo",
+                        "opD": "No existe ninguna diferencia diagnóstica según el DSM-5",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Mientras que el trastorno esquizoide destaca por el aislamiento y desapego social pasivo con indiferencia, el esquizotípico agrega excentricidad conductual, pensamiento mágico e idiosincrasias cognitivas (Fuente: PSIQUIATRÍA.pdf, Sección Grupo A)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un niño de 4 años es evaluado en paidopsiquiatría. Sus padres informan que no realiza contacto visual directo, no responde a su nombre cuando lo llaman y carece de lenguaje verbal funcional (solo emite sonidos ininteligibles). Muestra alineación repetitiva de juguetes por horas, crisis severas de llanto e irritabilidad ante pequeños cambios en la rutina del hogar, y ecolalia inmediata ocasional de ruidos de motor. Requiere asistencia completa y continua para las actividades básicas de la vida diaria.",
+                "preguntas": [
+                    {
+                        "pregunta": "13. De acuerdo a los criterios del DSM-5, ¿en qué nivel de severidad del Trastorno del Espectro Autista (TEA) se ubica este paciente?",
+                        "opA": "Nivel 1: 'Requiere apoyo'",
+                        "opB": "Nivel 2: 'Requiere apoyo sustancial'",
+                        "opC": "Nivel 3: 'Requiere apoyo muy sustancial'",
+                        "opD": "Nivel 4: 'Trastorno leve no especificado'",
+                        "respuestaCorrecta": "opC",
+                        "explicacion": "El Nivel 3 de TEA representa el grado más severo donde las deficiencias graves en las habilidades de comunicación social verbal y no verbal causan alteraciones severas del funcionamiento, requiriendo apoyo muy sustancial (Fuente: PSIQUIATRÍA.pdf, Sección TEA Niveles de Severidad)."
+                    },
+                    {
+                        "pregunta": "14. En caso de que este paciente desarrolle episodios severos de heteroagresión, rabieta incontrolable y autolesión refractarios a intervenciones conductuales, ¿qué fármaco antipsicótico atípico cuenta con aprobación oficial para reducir la irritabilidad grave en TEA?",
+                        "opA": "Haloperidol",
+                        "opB": "Risperidona",
+                        "opC": "Clozapina",
+                        "opD": "Metilfenidato",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La Risperidona (al igual que el Aripiprazol) es un antipsicótico atípico con aprobación formal para el manejo de la irritabilidad, agresión y autoagresión en niños y adolescentes con TEA (Fuente: PSIQUIATRÍA.pdf, Sección Tratamiento TEA)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un ingeniero civil de 45 años es referido a consulta por dificultades en la empresa donde trabaja. Es descrito por sus subalternos como un jefe rígido, inflexivamente obstinado y perfeccionista. Dedica tanto tiempo a organizar listas, reglas y cronogramas detallados que frecuentemente incumple las fechas de entrega de los proyectos principales. Él afirma con orgullo que 'su forma de trabajar es la única correcta' y que 'los demás son negligentes e incompetentes'. Niega pensamientos obsesivos intrusivos desagradables o rituales compulsivos para anular la ansiedad.",
+                "preguntas": [
+                    {
+                        "pregunta": "15. ¿Cuál es el diagnóstico de la personalidad que presenta este paciente?",
+                        "opA": "Trastorno Obsesivo-Compulsivo (TOC)",
+                        "opB": "Trastorno de la Personalidad Obsesivo-Compulsiva (TPOC)",
+                        "opC": "Trastorno de la Personalidad Narcisista",
+                        "opD": "Trastorno Paranoide de la Personalidad",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno de la Personalidad Obsesivo-Compulsiva (TPOC - Grupo C) se caracteriza por patrón permanente de preocupación por el orden, perfeccionismo y control mental e interpersonal a expensas de la flexibilidad (Fuente: PSIQUIATRÍA.pdf, Sección TPOC)."
+                    },
+                    {
+                        "pregunta": "16. ¿Cuál es el elemento psicopatológico crucial que diferencia el patrón de este paciente (TPOC) respecto al Trastorno Obsesivo-Compulsivo (TOC)?",
+                        "opA": "En el TPOC las conductas son egosintónicas y apreciadas por el paciente; en el TOC los síntomas obsesivos son egodistónicos y generan malestar intrusivo",
+                        "opB": "El TPOC cursa con alucinaciones y el TOC no",
+                        "opC": "El TOC solo se presenta en la infancia y el TPOC en adultos",
+                        "opD": "En el TPOC existe una clara respuesta favorable inmediata a antihistamínicos",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "El TPOC es egosintónico (el sujeto considera que su estilo perfeccionista y rígido es el correcto y deseable), a diferencia del TOC donde las obsesiones causan marcado sufrimiento egodistónico (Fuente: PSIQUIATRÍA.pdf, Sección TPOC vs TOC)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 31 años con antecedente de Esquizofrenia. Hace 48 horas se ajustó la dosis de Haloperidol intramuscular a 15 mg/día por un episodio de agitación psicótica. Es traído a urgencias con estupor, diaforesis profusa, labilidad tensional (TA oscilando entre 160/100 y 90/60 mmHg), taquicardia de 125 lpm y fiebre de 40.2°C. Al examen físico destaca hipertonía muscular severa en 'tubo de plomo' y mioclonías. Exámenes de laboratorio revelan Leucocitosis de 19,000/mm3 y Creatina Fosfocinasa (CPK) en 12,500 U/L.",
+                "preguntas": [
+                    {
+                        "pregunta": "17. ¿Cuál es el diagnóstico psiquiátrico de urgencia vital que presenta este paciente?",
+                        "opA": "Síndrome Serotoninérgico",
+                        "opB": "Síndrome Neuroléptico Maligno (SNM)",
+                        "opC": "Catatonia Periódica Fábril de Stauder",
+                        "opD": "Hipertermia Maligna por Anestesia",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Síndrome Neuroléptico Maligno es una reacción adversa grave por antipsicóticos caracterizada por rigidez muscular severa ('tubo de plomo'), hipertermia, inestabilidad autonómica y CPK elevada (Fuente: Literatura médica / Urgencias Psiquiátricas)."
+                    },
+                    {
+                        "pregunta": "18. ¿Cuál es la primera medida de intervención inmediata ante la confirmación de este cuadro?",
+                        "opA": "Duplicar la dosis de Haloperidol para reducir la agitación",
+                        "opB": "Suspensión inmediata de todos los antipsicóticos, soporte hemodinámico, enfriamiento físico activo y administración de Dantroleno o Bromocriptina",
+                        "opC": "Administrar un ISRS a dosis alta",
+                        "opD": "Realizar lavado gástrico con carbón activado",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La medida inicial y crítica es descontinuar de inmediato el neuroléptico, brindar medidas de soporte intensivo (hidratación, enfriamiento) y emplear agonistas dopaminérgicos (Bromocriptina) o relajantes musculares (Dantroleno) (Fuente: Evidencia de Urgencias Psiquiátricas)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenina de 34 años con Esquizofrenia Resistente al Tratamiento tras haber fallado a ensayos con Risperidona y Olanzapina. Se encuentra en su octava semana de tratamiento con Clozapina (350 mg/día) con excelente control de sus alucinaciones. Acude al control ambulatorio refiriendo odinofagia intensa, ulceraciones orales dolorosas y fiebre de 38.8°C. Se le realiza biometría hemática de control registrando un recuento absoluto de neutrófilos (RAN) de 350 células/mm3 (previo normal).",
+                "preguntas": [
+                    {
+                        "pregunta": "19. ¿Cómo se clasifica el hallazgo hematológico severo presentado por la paciente atribuible a la Clozapina?",
+                        "opA": "Neutropenia leve",
+                        "opB": "Agranulocitosis inducida por Clozapina (RAN < 500/mm3)",
+                        "opC": "Trombocitopenia inmune secundaria",
+                        "opD": "Reacción leucemoide secundaria a infección",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La agranulocitosis es la complicación hematológica más grave de la Clozapina, definida por un recuento absoluto de neutrófilos (RAN) inferior a 500/mm3, lo que predispone a infecciones fulminantes (Fuente: Guías de Seguridad de Clozapina)."
+                    },
+                    {
+                        "pregunta": "20. ¿Cuál es la conducta médica indicada sin excepción de acuerdo a los protocolos de farmaco-vigilancia de Clozapina ante un RAN < 500/mm3?",
+                        "opA": "Reducir la dosis de Clozapina a 100 mg/día y repetir examen en un mes",
+                        "opB": "Suspender inmediatamente la Clozapina de forma definitiva, aislamiento protector y evaluación hematológica de urgencia",
+                        "opC": "Continuar igual la Clozapina agregando un antibiótico oral ambulatorio",
+                        "opD": "Cambiar a Haloperidol inmediatamente a dosis alta sin suspender clozapina",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Un RAN < 500/mm3 constituye un criterio absoluto de suspensión inmediata y permanente de Clozapina para evitar septicemia y muerte (Fuente: Registro y Protocolos de Clozapina)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente femenino de 50 años en tratamiento por Trastorno Depresivo Mayor con Sertralina 100 mg/día. Debido a dolor lumbar crónico, un médico no psiquiatra le prescribió Tramadol 100 mg cada 8 horas. A las 24 horas de la primera dosis de Tramadol, la paciente es llevada a la urgencia por presentar agitación psicomotriz, temblor fino generalizado, sudoración profusa, diarrea y desorientación. Al examen físico presenta midriasis bilateral, hiperreflexia patelar severa y clonus inducido en ambos tobillos. Temperatura corporal de 38.6°C.",
+                "preguntas": [
+                    {
+                        "pregunta": "21. ¿Qué complicación farmacodinámica por exceso de estimulación del sistema serotoninérgico explica los síntomas hiperreflexicos y autonómicos de la paciente?",
+                        "opA": "Síndrome Serotoninérgico",
+                        "opB": "Síndrome Neuroléptico Maligno",
+                        "opC": "Intoxicación por Opioides",
+                        "opD": "Crisis de Angustia con Agorafobia",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "La combinación de un ISRS (Sertralina) con fármacos que incrementan la liberación o inhiben la recaptación de serotonina como el Tramadol desencadena el Síndrome Serotoninérgico (caracterizado por hiperreflexia, clonus, diaforesis y agitación) (Fuente: Farmacología Clínica Psiquiátrica)."
+                    },
+                    {
+                        "pregunta": "22. En el tratamiento farmacológico específico para revertir la hiperactivación serotoninérgica severa, ¿qué antagonista receptor serotoninérgico (5-HT2A) se utiliza como antídoto?",
+                        "opA": "Naloxona",
+                        "opB": "Ciproheptadina",
+                        "opC": "Flumazenil",
+                        "opD": "Atropina",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La Ciproheptadina es el antagonista del receptor serotoninérgico 5-HT2A/5-HT1A indicado como tratamiento farmacológico específico en el Síndrome Serotoninérgico moderado a severo (Fuente: Evidencia Psicofarmacológica)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un varón de 52 años acude a consulta legal/psiquiátrica impulsado por haber entablado múltiples demandas infundadas contra sus vecinos. Sostiene la creencia firme y persistente de que sus vecinos espían sus conversaciones mediante micrófonos en las paredes y buscan envenenar su suministro de agua para quedarse con su propiedad. En la entrevista se muestra extremadamente hipervigilante, desconfiado, frío e incapaz de tolerar cualquier crítica, interpretando comentarios neutros como ataques malévolos contra su persona.",
+                "preguntas": [
+                    {
+                        "pregunta": "23. ¿Qué trastorno de la personalidad del Grupo A describe mejor este patrón caracterizado por desconfianza injustificada y suspicacia generalizada?",
+                        "opA": "Trastorno de la Personalidad Esquizoide",
+                        "opB": "Trastorno de la Personalidad Paranoide",
+                        "opC": "Trastorno de la Personalidad Antisocial",
+                        "opD": "Trastorno Narcisista de la Personalidad",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno de la Personalidad Paranoide (Grupo A) cursa con desconfianza sospechosa y suspicacia casi permanente hacia los demás, interpretando sus intenciones como malévolas (Fuente: PSIQUIATRÍA.pdf, Sección Grupo A)."
+                    },
+                    {
+                        "pregunta": "24. ¿Cuál es la estrategia comunicacional adecuada que debe adoptar el médico/psiquiatra al entrevistar a un paciente con Personalidad Paranoide para evitar aumentar su suspicacia?",
+                        "opA": "Utilizar el humor constante y hacer bromas sobre sus sospechas",
+                        "opB": "Mantener una actitud profesional, formal, clara y transparente, evitando cuchicheos, ambigüedades o excesiva familiaridad",
+                        "opC": "Confrontar agresivamente al paciente diciéndole que está loco",
+                        "opD": "Darle la razón a todas sus teorías conspirativas y prometerle investigar a sus vecinos",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Con pacientes paranoides se requiere un trato neutral, respetuoso, directo y sumamente claro; la familiaridad excesiva o el secretismo aumentan de inmediato la sospecha de alianza en su contra (Fuente: PSIQUIATRÍA.pdf / Entrevista Clínica)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Una mujer de 26 años acude a dermatología y es derivada a psiquiatría tras observarse múltiples lesiones rascadas, costras y cicatrices superficiales en cara, brazos y tórax superior. Admite que dedica 2 horas al día a pellizcarse y rascárselas imperfecciones de la piel. Refiere que la conducta es precedida por una tensión interna creciente y que al pellizcarse experimenta alivio transitorio, seguido de profunda culpa y vergüenza por el daño estético causado. Ha intentado reiteradamente sin éxito detener la conducta.",
+                "preguntas": [
+                    {
+                        "pregunta": "25. ¿Cuál es el diagnóstico nosológico de esta entidad clasificada dentro del espectro del TOC en el DSM-5?",
+                        "opA": "Tricotilomanía",
+                        "opB": "Trastorno de Excoriación (pellizcado cutáneo / Skin-Picking)",
+                        "opC": "Trastorno de Dismorfia Corporal",
+                        "opD": "Dermatitis atópica primaria",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno de Excoriación (Excoriation/Skin-picking Disorder) forma parte de los Trastornos Relacionados con el TOC y se caracteriza por el rascado/pellizcado recurrente de la piel produciendo lesiones cutáneas e intentos repetidos de disminuir la conducta (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos Relacionados con TOC)."
+                    },
+                    {
+                        "pregunta": "26. En el espectro obsesivo-compulsivo y de control de impulsos, ¿cuál es el equivalente de este trastorno cuando la conducta repetitiva está dirigida a arrancarse el propio cabello?",
+                        "opA": "Tricotilomanía",
+                        "opB": "Trastorno por Atracón",
+                        "opC": "Cleptomanía",
+                        "opD": "Síndrome de Tourette",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "La Tricotilomanía consiste en el hábito recurrente de arrancarse el propio cabello o vello corporal, provocando pérdida de pelo e intentos fallidos de detenerlo (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos Relacionados con TOC)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Durante un seminario sobre desarrollo del psiquismo y personalidad, se discute el caso de dos hermanos gemelos monocigóticos criados en ambientes familiares adoptivos distintos. Ambos muestran desde la infancia una alta reactividad emocional, tendencia a la hiperactividad y búsqueda de novedad (disposición biológica heredada). Sin embargo, uno de ellos desarrolló valores de responsabilidad social y autorregulación, mientras que el otro desarrolló patrones impulsivos y deshonestos.",
+                "preguntas": [
+                    {
+                        "pregunta": "27. En la teoría de la personalidad, ¿qué término define la disposición biológica e instintiva genéticamente determinada con la que nace el individuo?",
+                        "opA": "Carácter",
+                        "opB": "Temperamento",
+                        "opC": "Superyó",
+                        "opD": "Identidad del Yo",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El temperamento se refiere a los aspectos biológicos, genéticos e innatos de la personalidad que determinan la reactividad emocional básica (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de la Personalidad)."
+                    },
+                    {
+                        "pregunta": "28. ¿Qué término psicodinámico y de la psicología del desarrollo define la dimensión de la personalidad modulada por el aprendizaje social, la educación, los valores y el ambiente?",
+                        "opA": "Temperamento",
+                        "opB": "Carácter",
+                        "opC": "Ello",
+                        "opD": "Reflejo condicionado",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El carácter es la componente adquirida de la personalidad fruto del aprendizaje, la crianza, la cultura y la asimilación de valores (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de la Personalidad)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Una mujer de 24 años con Trastorno Bipolar I acude a control psiquiátrico de rutina. Toma Ácido Valproico 1000 mg/día con adecuado control de ciclación afectiva. Comenta a su médico que se encuentra buscando quedar embarazada activamente en los próximos meses junto a su pareja. Actualmente no utiliza ningún método anticonceptivo.",
+                "preguntas": [
+                    {
+                        "pregunta": "29. ¿Cuál es el riesgo teratogénico fetal específico de mayor gravedad asociado al uso de Ácido Valproico en el primer trimestre de gestación?",
+                        "opA": "Anomalía de Ebstein en la válvula tricúspide",
+                        "opB": "Defectos del tubo neural (espina bífida, anencefalia)",
+                        "opC": "Hipoplasia pulmonar congénita",
+                        "opD": "Agenesia del cuerpo calloso",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Valproato está fuertemente contraindicado en mujeres en edad fértil sin anticoncepción estricta por elevar significativamente el riesgo de defectos del tubo neural como la espina bífida (Fuente: PSIQUIATRÍA.pdf, Sección Valproato)."
+                    },
+                    {
+                        "pregunta": "30. ¿Cuál es la recomendación farmacoterapéutica prioritaria ante el deseo de gestación de la paciente?",
+                        "opA": "Continuar con Valproato a la misma dosis y agregar ácido fólico",
+                        "opB": "Planificar la sustitución progresiva del Valproato por un estabilizador con mejor perfil de seguridad (como Litio con monitoreo ecocardiográfico o antipsicóticos atípicos) previo a la concepción",
+                        "opC": "Suspender de golpe todos los psicofármacos sin seguimiento",
+                        "opD": "Cambiar a Carbamazepina por ser totalmente inocua en el embarazo",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Debido a la alta teratogenicidad del Valproato, la recomendación médica es retirar progresivamente dicho fármaco antes de la concepción y sustituirlo por opciones de menor teratogenicidad con seguimiento estrecho (Fuente: PSIQUIATRÍA.pdf / Guías Perinatales)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un escolar masculino de 7 años sin antecedentes psiquiátricos previos presenta de forma explosiva y de la noche a la mañana obsesiones de contaminación y compulsiones de lavado de manos extremadamente severas, acompañadas de tics motores faciales e inestabilidad emocional. Dos semanas antes presentó un episodio de faringoamigdalitis febril confirmada por exudado como faringitis estreptocócica por Estreptococo Beta-Hemolítico del Grupo A (EBHGA).",
+                "preguntas": [
+                    {
+                        "pregunta": "31. ¿Qué entidad neuropsiquiátrica pediátrica post-infecciosa se sospecha ante este inicio brusco de TOC y tics?",
+                        "opA": "Síndrome PANDAS (Pediatric Autoimmune Neuropsychiatric Disorders Associated with Streptococcal Infections)",
+                        "opB": "Trastorno de la Tourette idiopático tardío",
+                        "opC": "Esquizofrenia de inicio muy precoz",
+                        "opD": "Corea de Sydenham pura",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "PANDAS representa la aparición o exacerbación abrupta de TOC y/o tics en niños desencadenada por una respuesta autoinmune post-infección estreptocócica del grupo A (Fuente: PSIQUIATRÍA.pdf, Sección Etiología TOC)."
+                    },
+                    {
+                        "pregunta": "32. En el mecanismo fisiopatológico de PANDAS, ¿contra qué estructura subcortical cerebral se dirigen por mimetismo molecular los anticuerpos antiestreptocócicos?",
+                        "opA": "Cerebelo",
+                        "opB": "Ganglios basales (especialmente Núcleo Caudado y Putamen)",
+                        "opC": "Corteza Occipital",
+                        "opD": "Hipocampo",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "Los anticuerpos generados contra el estreptococo reaccionan por mimetismo molecular contra antígenos de los ganglios basales (estriado/caudado), alterando el circuito CSTC e induciendo tics y obsesiones (Fuente: PSIQUIATRÍA.pdf / Neurobiología PANDAS)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Una mujer de 28 años acude a consulta vestida con indumentaria sumamente llamativa y brillante. Durante la entrevista utiliza un lenguaje impreciso, dramatizado y teatral, gesticulando de manera exagerada. Expresa gran malestar si el terapeuta dirige su atención a tomar notas en la ficha médica, buscando activamente retomar el centro de atención. Sus emociones son cambiantes y superficiales, refiriéndose a personas que acaba de conocer como sus 'amigos del alma entrañables'.",
+                "preguntas": [
+                    {
+                        "pregunta": "33. ¿Cuál es el trastorno de la personalidad que se caracteriza por búsqueda incesante de atención, teatralidad y afectividad superficial?",
+                        "opA": "Trastorno Narcisista de la Personalidad",
+                        "opB": "Trastorno Histriónico de la Personalidad",
+                        "opC": "Trastorno Límite de la Personalidad",
+                        "opD": "Trastorno por Evitación",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Trastorno Histriónico de la Personalidad (Grupo B) cursa con un patrón generalizado de búsqueda de atención, seducción, expresión emocional teatral e influenciabilidad (Fuente: PSIQUIATRÍA.pdf, Sección Grupo B)."
+                    },
+                    {
+                        "pregunta": "34. ¿A qué grupo o Cluster de los trastornos de la personalidad pertenece el Trastorno Histriónico junto con el Límite, Antisocial y Narcisista?",
+                        "opA": "Grupo A (Raros o excéntricos)",
+                        "opB": "Grupo B (Dramáticos, emocionales o erráticos)",
+                        "opC": "Grupo C (Ansiosos o temerosos)",
+                        "opD": "Grupo D (Desorganizados)",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El Grupo B reúne a las personalidades dramáticas, emocionales, inestables o erráticas: Histriónica, Narcisista, Antisocial y Límite (Fuente: PSIQUIATRÍA.pdf, Sección Trastornos de la Personalidad)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un hombre de 45 años experimenta sentimientos intensos e inconscientes de envidia y hostilidad hacia su hermano menor, quien ha tenido un gran éxito profesional. Sin embargo, en el plano consciente el paciente desconoce totalmente este rechazo y se comporta hacia su hermano con una preocupación extrema, adulación constante y una actitud sobreprotectora rozando lo sofocante.",
+                "preguntas": [
+                    {
+                        "pregunta": "35. ¿Qué mecanismo de defensa neurótico transforma el impulso hostil inaceptable en su opuesto manifiesto (adulación y sobreprotección)?",
+                        "opA": "Sublimación",
+                        "opB": "Formación reactiva",
+                        "opC": "Proyección",
+                        "opD": "Anulación retroactiva",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La Formación Reactiva es un mecanismo por el cual el Yo sustituye una emoción o impulso inaceptable inconsciente por su opuesto manifiesto en la conducta consciente (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa Neuróticos)."
+                    },
+                    {
+                        "pregunta": "36. Si este paciente, en lugar de sobreproteger a su hermano, acusara falsamente a su hermano de envidiarlo a él y de querer hacerle daño, ¿qué mecanismo estaría empleando?",
+                        "opA": "Proyección",
+                        "opB": "Represión",
+                        "opC": "Sublimación",
+                        "opD": "Supresión",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "La Proyección adscribe a otra persona los propios sentimientos inaceptables (atribuir a otros su propia envidia/hostilidad) (Fuente: PSIQUIATRÍA.pdf, Sección Mecanismos de Defensa)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Un joven de 20 años ingresa a la unidad de psiquiatría tras haber caminado desnudo en medio de la vía pública. Al ser entrevistado afirma escuchar la voz audible de un locutor dentro de sus oídos que le ordena desnudarse porque 'los rayos solares purificarán su alma'. Está convencido de que la voz proviene físicamente de un microchip instalado en su cerebro por alienígenas. Incapaz de evaluar objetivamente la falsedad de estas percepciones.",
+                "preguntas": [
+                    {
+                        "pregunta": "37. Dentro de las 12 Funciones del Yo, ¿cuál es la función de nivel primario gravemente abolida en este paciente que le impide distinguir la fantasía/alucinación interna de la realidad externa?",
+                        "opA": "Prueba de Realidad (Reality Testing)",
+                        "opB": "Regresión Adaptativa al Servicio del Yo",
+                        "opC": "Barrera de Estímulos",
+                        "opD": "Dominio-Competencia",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "La prueba de realidad evalúa la capacidad de distinguir estímulos internos (pensamientos, fantasías, alucinaciones) de la realidad externa objetiva. Su fracaso total define la psicosis (Fuente: PSIQUIATRÍA.pdf, Tabla 12 Funciones del Yo)."
+                    },
+                    {
+                        "pregunta": "38. ¿Qué antipsicótico atípico es una opción de primera línea para restaurar el funcionamiento dopaminérgico mesolímbico y revertir las alucinaciones en este paciente con esquizofrenia de primer episodio?",
+                        "opA": "Risperidona o Aripiprazol",
+                        "opB": "Diazepam",
+                        "opC": "Metilfenidato",
+                        "opD": "Sertralina",
+                        "respuestaCorrecta": "opA",
+                        "explicacion": "Los antipsicóticos atípicos de primera línea como Risperidona, Aripiprazol u Olanzapina están indicados en el manejo del primer episodio psicótico para controlar síntomas positivos (Fuente: PSIQUIATRÍA.pdf / Guías de Esquizofrenia)."
+                    }
+                ]
+            },
+            {
+                "explicacionCaso": "Paciente masculino de 55 años con Trastorno Esquiçoafectivo en tratamiento con Carbamazepina 800 mg/día. Acude a controles médicos por presentar astenia severa, cefalea holocraneana, confusión leve y calambres musculares recurrente. No presenta vómitos ni diarrea. En el perfil bioquímico se reporta: Sodio sérico (Na+) 122 mEq/L (Normal 135-145), Osmolaridad plasmática reducida, K+ 4.1 mEq/L, Función renal y tiroidea normales.",
+                "preguntas": [
+                    {
+                        "pregunta": "39. ¿Cuál es la alteración hidroelectrolítica característica e inducida por la Carbamazepina/Oxcarbazepina debida a secreción inapropiada de hormona antidiurética (SIADH)?",
+                        "opA": "Hipernatremia hiperosmolar",
+                        "opB": "Hiponatremia dilucional",
+                        "opC": "Hiperpotasemia severa",
+                        "opD": "Hipocalcemia marcada",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "La Carbamazepina y Oxcarbazepina estimulan la liberación o potencian la acción de la hormona antidiurética (ADH), induciendo hiponatremia dilucional por retención libre de agua (Fuente: PSIQUIATRÍA.pdf, Sección Carbamazepina)."
+                    },
+                    {
+                        "pregunta": "40. ¿Cuál debe ser el manejo médico inicial de esta hiponatremia dilucional moderada sintomática por Carbamazepina?",
+                        "opA": "Administrar soluciones hipotónicas intravenosas de dextrosa al 5%",
+                        "opB": "Restricción de líquidos libres, monitoreo de sodio plasmático y considerar el ajuste o sustitución progresiva de la Carbamazepina",
+                        "opC": "Aumentar la dosis de Carbamazepina al doble",
+                        "opD": "Administrar desmopresina intranasal inmediatamente",
+                        "respuestaCorrecta": "opB",
+                        "explicacion": "El manejo de la hiponatremia por Carbamazepina involucra restricción hídrica, seguimiento estrecho de la natremia y reducción/cambio del psicofármaco causante (Fuente: PSIQUIATRÍA.pdf / Psicofarmacología Clínica)."
+                    }
+                ]
+            }
+        ];
+
+        // Normalización de la estructura de Casos Clínicos a una lista plana de preguntas
+        function obtenerPreguntasDeCasos(casos) {
+            let preguntasProcesadas = [];
+            casos.forEach(caso => {
+                caso.preguntas.forEach(p => {
+                    preguntasProcesadas.push({
+                        ...p,
+                        explicacionCaso: caso.explicacionCaso
+                    });
+                });
+            });
+            return preguntasProcesadas;
+        }
+
+        let modoActual = 'preguntas'; // 'preguntas' o 'casos'
+        let listaActual = mockPreguntas;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        const questionCounter = document.getElementById("question-counter");
+        const scoreCounter = document.getElementById("score-counter");
+        const progressBar = document.getElementById("progress-bar");
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const feedbackContainer = document.getElementById("feedback-container");
+        const feedbackTitle = document.getElementById("feedback-title");
+        const feedbackText = document.getElementById("feedback-text");
+        const nextBtn = document.getElementById("next-btn");
+        const quizContainer = document.getElementById("quiz-container");
+        const resultsCard = document.getElementById("results-card");
+        const caseContainer = document.getElementById("case-container");
+        const caseDescription = document.getElementById("case-description");
+        const modeQuestionsBtn = document.getElementById("mode-questions-btn");
+        const modeCasesBtn = document.getElementById("mode-cases-btn");
+
+        function cambiarModo(nuevoModo) {
+            modoActual = nuevoModo;
+            if (modoActual === 'preguntas') {
+                listaActual = mockPreguntas;
+                modeQuestionsBtn.className = "btn btn-primary btn-mode";
+                modeCasesBtn.className = "btn btn-outline-primary btn-mode";
+            } else {
+                listaActual = obtenerPreguntasDeCasos(mockCasos);
+                modeQuestionsBtn.className = "btn btn-outline-primary btn-mode";
+                modeCasesBtn.className = "btn btn-primary btn-mode";
+            }
+            reiniciarQuiz();
+        }
+
+        function cargarPregunta() {
+            answered = false;
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+
+            const currentData = listaActual[currentQuestionIndex];
+
+            // Renderizar caso clínico si aplica
+            if (currentData.explicacionCaso) {
+                caseDescription.innerText = currentData.explicacionCaso;
+                caseContainer.classList.remove("d-none");
+            } else {
+                caseContainer.classList.add("d-none");
+            }
+
+            questionCounter.innerText = `Pregunta ${currentQuestionIndex + 1} de ${listaActual.length}`;
+            scoreCounter.innerText = `Aciertos: ${score}`;
+            const progressPercent = ((currentQuestionIndex) / listaActual.length) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            questionText.innerText = currentData.pregunta;
+            optionsContainer.innerHTML = "";
+
+            const opcionesMap = [
+                { key: "opA", text: currentData.opA },
+                { key: "opB", text: currentData.opB },
+                { key: "opC", text: currentData.opC },
+                { key: "opD", text: currentData.opD }
+            ];
+
+            opcionesMap.forEach(op => {
+                const btn = document.createElement("button");
+                btn.className = "btn btn-outline-secondary option-btn";
+                btn.innerHTML = `<strong>${op.key.replace('op', '').toUpperCase()}.</strong> ${op.text}`;
+                btn.onclick = () => seleccionarRespuesta(op.key, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function seleccionarRespuesta(opcionSeleccionada, btnElement) {
+            if (answered) return;
+            answered = true;
+
+            const currentData = listaActual[currentQuestionIndex];
+            const botones = optionsContainer.getElementsByTagName("button");
+
+            for (let btn of botones) {
+                btn.disabled = true;
+            }
+
+            if (opcionSeleccionada === currentData.respuestaCorrecta) {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("correct-answer");
+                score++;
+                scoreCounter.innerText = `Aciertos: ${score}`;
+
+                feedbackTitle.innerText = "¡Correcto! 🎉";
+                feedbackContainer.className = "alert alert-success mt-3";
+            } else {
+                btnElement.classList.remove("btn-outline-secondary");
+                btnElement.classList.add("incorrect-answer");
+
+                for (let btn of botones) {
+                    if (btn.innerHTML.startsWith(`<strong>${currentData.respuestaCorrecta.replace('op', '').toUpperCase()}.</strong>`)) {
+                        btn.classList.remove("btn-outline-secondary");
+                        btn.classList.add("correct-answer");
+                    }
+                }
+
+                feedbackTitle.innerText = "Incorrecto ❌";
+                feedbackContainer.className = "alert alert-danger mt-3";
+            }
+
+            feedbackText.innerText = currentData.explicacion;
+            feedbackContainer.classList.remove("d-none");
+            nextBtn.classList.remove("d-none");
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < listaActual.length) {
+                cargarPregunta();
+            } else {
+                mostrarResultados();
+            }
+        };
+
+        function mostrarResultados() {
+            quizContainer.classList.add("d-none");
+            caseContainer.classList.add("d-none");
+            feedbackContainer.classList.add("d-none");
+            nextBtn.classList.add("d-none");
+            progressBar.style.width = "100%";
+
+            document.getElementById("final-score").innerText = `Tu calificación final es: ${score} de ${listaActual.length} aciertos`;
+            resultsCard.classList.remove("d-none");
+        }
+
+        function reiniciarQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultsCard.classList.add("d-none");
+            quizContainer.classList.remove("d-none");
+            cargarPregunta();
+        }
+
+        // Carga Inicial
+        cargarPregunta();
+    </script>
+    <script src="../pwa.js" defer></script>
+</body>
+
+</html>
